@@ -1,0 +1,6 @@
+{
+  "name": "Portfolio & Chatbot",
+  "description": "A premium personal portfolio website. Includes an AI chatbot powered by Gemini.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
