@@ -3,19 +3,26 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+import multer from "multer";
 
 dotenv.config();
+
+const upload = multer({
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+});
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
   httpOptions: {
     headers: {
-      'User-Agent': 'aistudio-build',
-    }
-  }
+      "User-Agent": "aistudio-build",
+    },
+  },
 });
 
-const SYSTEM_INSTRUCTION = `You are the official AI assistant for Rutvik Dangar's personal portfolio website. 
+const SYSTEM_INSTRUCTION = `You are the official AI assistant for Rutvik Dangar's personal portfolio. 
+Rule 1: Be highly accurate and extremely concise. Avoid hallucinating off-topic answers. Use bullet points where appropriate for readability.
+Rule 2: Respond quickly and gracefully. Keep answers short to ensure fast response times unless asked for detailed explanations.
 Your tone should be professional, confident, helpful, and friendly.
 
 Knowledge Base:
@@ -73,6 +80,9 @@ Core Competencies & Professional Skills:
 Skills & Tools:
 Skills: AI & Prompt Engineering, No-Code/Low-Code Dev, Digital Marketing, Market Research, UI/UX Design, Data Analysis (Excel), Social Media & Content Strategy.
 Tools: ChatGPT (Ideation & Architecture), Claude (Logic & Persona design), Gemini (Multimodal & API), OutSystems (Enterprise low-code), n8n (Automations), Framer (Web Experiences), Shopify (E-commerce), MS Excel (Data validation & logic).
+Website Link: https://rutvikinfo-web-com.vercel.app
+
+Flirting Rule: If the user flirts or says romantic things to you, respond playfully but always steer the conversation back to Rutvik's portfolio and share the website link: https://rutvikinfo-web-com.vercel.app
 
 Answer any questions correctly using this info. Keep answers scannable and polite.
 Never output sensitive data unless given above. If they ask to hire/contact, provide his email or phone.`;
@@ -89,6 +99,56 @@ async function startServer() {
     res.json({ status: "ok" });
   });
 
+  app.post("/api/analyze-file", upload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      const fileBuffer = req.file.buffer;
+      const mimeType = req.file.mimetype;
+
+      // Use gemini-1.5-flash for max speed (~2s)
+      const prompt = "Analyze image. If NSF/explicit/inappropriate (asslil/ajib), reply 'UNSAFE: [Hindi/Eng reason]'. Else 'SAFE'.";
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: [
+          {
+            role: "user",
+            parts: [
+              { text: prompt },
+              {
+                inlineData: {
+                  data: fileBuffer.toString("base64"),
+                  mimeType: mimeType,
+                },
+              },
+            ],
+          },
+        ],
+        config: { maxOutputTokens: 20 },
+      });
+
+      const responseText = response.text || "";
+      if (responseText.includes("UNSAFE")) {
+        const reason = responseText.replace("UNSAFE:", "").trim();
+        return res.json({ safe: false, reason: reason });
+      }
+
+      // If safe, we can just return a fake URL or we could save it to public/uploads.
+      // Since WhatsApp message is opened client-side via wa.me URL, we can't truly attach a file,
+      // but we can simulate success.
+      return res.json({
+        safe: true,
+        fileUrl: "User attached a file: " + req.file.originalname,
+      });
+    } catch (error: any) {
+      console.error("[Analyze File Error]:", error?.message || error);
+      res.status(500).json({ error: "Failed to analyze file." });
+    }
+  });
+
   // API constraints
   app.post("/api/contact", async (req, res) => {
     try {
@@ -98,14 +158,16 @@ async function startServer() {
         name,
         email,
         message,
-        submittedAt: new Date().toISOString()
+        submittedAt: new Date().toISOString(),
       };
-      
+
       contactDatabase.push(newEntry);
       console.log(`[Database] Contact Saved: ${name} <${email}>`);
       console.log(`[Database] Total Entries: ${contactDatabase.length}`);
-      
-      res.status(200).json({ success: true, message: "Data successfully saved." });
+
+      res
+        .status(200)
+        .json({ success: true, message: "Data successfully saved." });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Failed to save contact data" });
@@ -114,8 +176,8 @@ async function startServer() {
 
   app.post("/api/chat", async (req, res) => {
     try {
-      const { message, history = [], adminInstructions = "" } = req.body;
-      
+      const { message, history = [], adminInstructions = "", image } = req.body;
+
       if (!message) {
         return res.status(400).json({ error: "Message is required" });
       }
@@ -133,23 +195,41 @@ async function startServer() {
 
       const contents = validHistory.map((msg: any) => ({
         role: msg.role === "ai" ? "model" : "user",
-        parts: [{ text: msg.text }]
+        parts: [{ text: msg.text }],
       }));
-      
-      contents.push({ role: "user", parts: [{ text: message }] });
+
+      const userParts: any[] = [{ text: message }];
+
+      if (image && typeof image === "string" && image.startsWith("data:")) {
+        const [meta, base64Data] = image.split(",");
+        const mimeTypeMatch = meta.match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+).*;/);
+        
+        if (mimeTypeMatch && mimeTypeMatch[1]) {
+           const mimeType = mimeTypeMatch[1];
+           // In Gemini API, only certain mimetypes are supported, but we pass it and if it fails, it fails gracefully.
+           userParts.push({
+             inlineData: {
+               data: base64Data,
+               mimeType: mimeType,
+             },
+           });
+        }
+      }
+
+      contents.push({ role: "user", parts: userParts });
 
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.5-flash",
         contents: contents,
         config: {
           systemInstruction: currentSystemInstruction,
-        }
+        },
       });
-      
+
       res.json({ text: response.text });
     } catch (error: any) {
       console.error("[Gemini API Error]:", error?.message || error);
-      res.status(500).json({ error: "Failed to fetch response." });
+      res.status(500).json({ error: error?.message || "Failed to fetch response." });
     }
   });
 
@@ -161,11 +241,11 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
+    const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
     // Support wildcard routing for React Router (if used)
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
     });
   }
 

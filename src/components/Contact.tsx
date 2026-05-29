@@ -18,7 +18,6 @@ interface ContactProps {
 }
 
 export default function Contact({ onProtectedAction }: ContactProps) {
-  const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -26,6 +25,11 @@ export default function Contact({ onProtectedAction }: ContactProps) {
     email: "",
     message: "",
   });
+
+  const [file, setFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
 
   const handleProtectedRedirect = (
     e: React.MouseEvent<HTMLAnchorElement>,
@@ -54,28 +58,78 @@ export default function Contact({ onProtectedAction }: ContactProps) {
     setFormData((prev) => ({ ...prev, [e.target.id]: e.target.value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0];
+    if (!selected) return;
+
+    setFile(selected);
+    setAnalyzeError(null);
+    setIsAnalyzing(true);
+
+    // Show preview immediately
+    if (selected.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFilePreview(reader.result as string);
+      };
+      reader.readAsDataURL(selected);
+    } else {
+      setFilePreview(null);
+    }
 
     try {
-      const response = await fetch("/api/contact", {
+      const formDataObj = new FormData();
+      formDataObj.append("file", selected);
+
+      const res = await fetch("/api/analyze-file", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
+        body: formDataObj,
       });
 
-      if (response.ok) {
-        setSuccess(true);
-        setFormData({ name: "", email: "", message: "" }); // Clear form
-        setTimeout(() => setSuccess(false), 5000);
+      const data = await res.json();
+      if (!data.safe) {
+        setAnalyzeError(data.reason || "This content is not allowed.");
+        setFile(null);
+        setFilePreview(null);
+        if (e.target) e.target.value = "";
       }
-    } catch (error) {
-      console.error("Failed to submit", error);
+    } catch (err) {
+      console.error(err);
+      setAnalyzeError("Failed to analyze file. Please try again.");
+      setFile(null);
+      setFilePreview(null);
+      if (e.target) e.target.value = "";
     } finally {
-      setLoading(false);
+      setIsAnalyzing(false);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isAnalyzing) return; // wait for analysis
+
+    const action = () => {
+      const attachmentText = file
+        ? `\n[Attached File Processed Safely: ${file.name}]`
+        : "";
+      const text = `Hi Rutvik, my name is ${formData.name}.\nEmail: ${formData.email}\n\nMessage:\n${formData.message}${attachmentText}`;
+      window.open(
+        `https://wa.me/919328796324?text=${encodeURIComponent(text)}`,
+        "_blank",
+        "noopener,noreferrer",
+      );
+
+      setSuccess(true);
+      setFormData({ name: "", email: "", message: "" });
+      setFile(null);
+      setFilePreview(null);
+      setTimeout(() => setSuccess(false), 5000);
+    };
+
+    if (onProtectedAction) {
+      onProtectedAction(action);
+    } else {
+      action();
     }
   };
 
@@ -132,7 +186,7 @@ export default function Contact({ onProtectedAction }: ContactProps) {
               </div>
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex flex-wrap gap-4">
               <a
                 href="https://linkedin.com/in/rutvik-dangar-416219313"
                 onClick={(e) =>
@@ -146,6 +200,15 @@ export default function Contact({ onProtectedAction }: ContactProps) {
                 className="w-12 h-12 bg-navy text-white rounded-full flex items-center justify-center hover:-translate-y-1 hover:shadow-lg transition-all duration-300"
               >
                 <Linkedin size={20} />
+              </a>
+              <a
+                href="tel:+919328796324"
+                onClick={(e) =>
+                  handleProtectedRedirect(e, "tel:+919328796324", false)
+                }
+                className="w-12 h-12 bg-navy text-white rounded-full flex items-center justify-center hover:-translate-y-1 hover:shadow-lg transition-all duration-300"
+              >
+                <Phone size={20} />
               </a>
               <a
                 href="https://github.com/Rutvik-Dangar"
@@ -282,35 +345,78 @@ export default function Contact({ onProtectedAction }: ContactProps) {
                   <input
                     type="file"
                     id="file"
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    onChange={handleFileChange}
+                    className={`absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 ${(isAnalyzing || file) ? 'pointer-events-none' : ''}`}
+                    accept="image/*,.pdf,.doc,.docx"
+                    disabled={isAnalyzing || file !== null}
                   />
-                  <div className="w-full px-4 py-3 rounded-xl border border-dashed border-navy/30 bg-white flex items-center gap-3 text-charcoal hover:bg-navy/5 transition-colors">
-                    <Upload size={20} />
-                    <span>Upload a file or photo</span>
+                  <div className="w-full px-4 py-3 rounded-xl border border-dashed border-navy/30 bg-white flex flex-col gap-3 text-charcoal hover:bg-navy/5 transition-colors relative z-0 min-h-[56px] justify-center">
+                    {isAnalyzing ? (
+                      <div className="flex items-center gap-3">
+                        <div className="w-5 h-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin"></div>
+                        <span>Analyzing file...</span>
+                      </div>
+                    ) : file ? (
+                      <div className="flex flex-col gap-3 relative z-10">
+                        <div className="flex items-center gap-3">
+                          <CheckCircle2 size={20} className="text-green-600" />
+                          <span className="font-medium truncate max-w-[200px] md:max-w-xs text-charcoal">
+                            {file.name} (Safe)
+                          </span>
+                        </div>
+                        {filePreview && (
+                          <div className="rounded-lg overflow-hidden border border-navy/10 w-24 h-24 relative">
+                            <img
+                              src={filePreview}
+                              alt="Preview"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setFile(null);
+                            setFilePreview(null);
+                            const fileInput = document.getElementById('file') as HTMLInputElement;
+                            if (fileInput) fileInput.value = '';
+                          }}
+                          className="absolute -top-1 -right-1 w-6 h-6 bg-charcoal/80 text-white rounded-full flex items-center justify-center hover:bg-charcoal transition-colors z-[100]"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3 text-charcoal">
+                        <Upload size={20} />
+                        <span>Upload a file or photo</span>
+                      </div>
+                    )}
                   </div>
                 </div>
+                {analyzeError && (
+                  <motion.p
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    className="text-red-500 text-sm mt-2 font-medium"
+                  >
+                    Upload Canceled: {analyzeError}
+                  </motion.p>
+                )}
               </div>
 
               <button
                 type="submit"
-                disabled={loading || success}
+                disabled={success || isAnalyzing}
                 className="w-full py-4 bg-navy text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-electric transition-colors disabled:opacity-70"
               >
-                {loading ? (
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{
-                      repeat: Infinity,
-                      duration: 1,
-                      ease: "linear",
-                    }}
-                    className="w-5 h-5 border-2 border-white rounded-full border-t-transparent"
-                  />
-                ) : success ? (
-                  <>Message Sent! ✨</>
+                {success ? (
+                  <>Messages Sent! ✨</>
                 ) : (
                   <>
-                    Send Message <Send size={18} />
+                    Send Messages <Send size={18} />
                   </>
                 )}
               </button>

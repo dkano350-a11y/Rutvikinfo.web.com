@@ -45,6 +45,21 @@ export default function Insights() {
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
 
+  const handleSubscribe = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (email) {
+      const text = `Hi Rutvik, I would like to stay in the loop! My email is ${email}`;
+      window.open(
+        `https://wa.me/919328796324?text=${encodeURIComponent(text)}`,
+        "_blank",
+        "noopener,noreferrer",
+      );
+      setSubscribed(true);
+      setEmail("");
+      setTimeout(() => setSubscribed(false), 5000);
+    }
+  };
+
   const posts: Article[] = [
     {
       id: 1,
@@ -197,15 +212,6 @@ export default function Insights() {
     navigator.clipboard.writeText(shareUrl);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
-  };
-
-  const handleSubscribe = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (email) {
-      setSubscribed(true);
-      setTimeout(() => setSubscribed(false), 4000);
-      setEmail("");
-    }
   };
 
   const handleShare = (platform: string, article: Article) => {

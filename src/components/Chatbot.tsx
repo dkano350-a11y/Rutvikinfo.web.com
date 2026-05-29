@@ -12,6 +12,8 @@ import {
   MoreVertical,
   Image as ImageIcon,
   Settings,
+  Share2,
+  FileText,
 } from "lucide-react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -166,6 +168,23 @@ export default function Chatbot() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const handleShare = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "Rutvik Dangar Space",
+          text: "Check out Rutvik Dangar's portfolio and chat with this awesome AI agent! 🚀",
+          url: "https://rutvikinfo-web-com.vercel.app"
+        });
+      } else {
+        await navigator.clipboard.writeText("https://rutvikinfo-web-com.vercel.app");
+        alert("Link copied to clipboard!");
+      }
+    } catch (err) {
+      console.log("Error sharing:", err);
+    }
+  };
+
   const removeFile = () => {
     setFile(null);
     setPreviewUrl(null);
@@ -198,8 +217,7 @@ export default function Chatbot() {
       image: previewUrl || undefined,
     };
 
-    // Convert to history format backend expects (currently using only text)
-    // Filter out messages with images for now if the API doesn't support it, but we'll send it anyway as text.
+    // Convert to history format backend expects
     const currentHist = [...messages].map((m) => ({
       role: m.role,
       text: m.text,
@@ -207,6 +225,10 @@ export default function Chatbot() {
 
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
+    
+    // Capture file before removing it
+    const fileBase64 = previewUrl;
+    
     removeFile();
     setIsLoading(true);
 
@@ -218,6 +240,7 @@ export default function Chatbot() {
           message: text || "User uploaded a file.",
           history: currentHist,
           adminInstructions,
+          image: fileBase64 || undefined,
         }),
       });
 
@@ -312,6 +335,13 @@ export default function Chatbot() {
                 </div>
               </div>
               <div className="flex items-center gap-2 relative">
+                <button
+                  onClick={handleShare}
+                  className="text-white/70 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10"
+                  aria-label="Share"
+                >
+                  <Share2 size={18} />
+                </button>
                 <button
                   onClick={() => setShowOptions(!showOptions)}
                   className="text-white/70 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10"
@@ -454,9 +484,12 @@ export default function Chatbot() {
               className="flex-1 overflow-y-auto p-4 md:p-6 bg-[#f8f9fa] space-y-6"
               onClick={() => setShowOptions(false)}
             >
-              {messages.map((msg) => (
-                <div
+              {messages.map((msg, index) => (
+                <motion.div
                   key={msg.id}
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
                   className={`flex w-full ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   {msg.role === "ai" && (
@@ -469,11 +502,18 @@ export default function Chatbot() {
                   >
                     {msg.image && (
                       <div className="mb-3 rounded-xl overflow-hidden relative group">
-                        <img
-                          src={msg.image}
-                          alt="Upload preview"
-                          className="w-full h-auto object-cover max-h-48 bg-white"
-                        />
+                        {msg.image.startsWith("data:image/") ? (
+                          <img
+                            src={msg.image}
+                            alt="Upload preview"
+                            className="w-full h-auto object-cover max-h-48 bg-white"
+                          />
+                        ) : (
+                          <div className="w-full h-24 bg-white/10 flex items-center justify-center gap-2 border border-white/20 rounded-xl">
+                            <FileText size={24} className="text-white/80" />
+                            <span className="text-sm font-medium text-white/80">Document Attached</span>
+                          </div>
+                        )}
                       </div>
                     )}
                     {msg.text && (
@@ -484,61 +524,52 @@ export default function Chatbot() {
                       </div>
                     )}
                   </div>
-                </div>
+                </motion.div>
               ))}
               {isLoading && (
-                <div className="flex w-full justify-start items-center">
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex w-full justify-start items-center"
+                >
                   <div className="w-8 h-8 rounded-full bg-electric/20 text-electric flex items-center justify-center shrink-0 mr-3 shadow-sm">
                     <Bot size={16} />
                   </div>
-                  <div className="bg-white border border-black/5 p-4 rounded-2xl rounded-tl-sm flex gap-1.5 items-center shadow-sm">
+                  <div className="bg-white border border-black/5 px-5 py-3.5 rounded-2xl rounded-tl-sm flex gap-2 items-center shadow-sm">
                     <motion.div
-                      animate={{ y: [0, -4, 0] }}
-                      transition={{ repeat: Infinity, duration: 0.6, delay: 0 }}
-                      className="w-1.5 h-1.5 bg-electric rounded-full"
+                      animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
+                      className="w-2 h-2 bg-electric rounded-full"
                     />
-                    <motion.div
-                      animate={{ y: [0, -4, 0] }}
-                      transition={{
-                        repeat: Infinity,
-                        duration: 0.6,
-                        delay: 0.2,
-                      }}
-                      className="w-1.5 h-1.5 bg-electric rounded-full"
-                    />
-                    <motion.div
-                      animate={{ y: [0, -4, 0] }}
-                      transition={{
-                        repeat: Infinity,
-                        duration: 0.6,
-                        delay: 0.4,
-                      }}
-                      className="w-1.5 h-1.5 bg-electric rounded-full"
-                    />
+                    <motion.span 
+                      animate={{ opacity: [0.4, 1, 0.4] }}
+                      transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                      className="text-xs font-medium text-electric tracking-wide"
+                    >
+                      Thinking...
+                    </motion.span>
                   </div>
-                </div>
+                </motion.div>
               )}
               <div ref={messagesEndRef} className="h-2" />
             </div>
 
             {/* Input Area */}
             <div className="p-4 bg-white border-t border-navy/5 shadow-[0_-10px_30px_rgba(0,0,0,0.03)] z-10 relative">
-              {messages.length === 1 && (
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {(
-                    SECTION_SUGGESTIONS[activeSection] ||
-                    SECTION_SUGGESTIONS.default
-                  ).map((sug, i) => (
-                    <button
-                      key={i}
-                      onClick={() => handleSend(sug)}
-                      className="text-xs bg-cream/70 border border-navy/10 text-navy font-medium px-4 py-2 rounded-full hover:bg-electric hover:text-white hover:border-electric transition-colors shadow-sm"
-                    >
-                      {sug}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <div className="flex overflow-x-auto gap-2 mb-4 pb-2 items-center hide-scrollbar">
+                {(
+                  SECTION_SUGGESTIONS[activeSection] ||
+                  SECTION_SUGGESTIONS.default
+                ).map((sug, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleSend(sug)}
+                    className="shrink-0 whitespace-nowrap text-xs bg-cream/70 border border-navy/10 text-navy font-medium px-4 py-2 rounded-full hover:bg-electric hover:text-white hover:border-electric transition-colors shadow-sm"
+                  >
+                    {sug}
+                  </button>
+                ))}
+              </div>
 
               {/* File Preview */}
               <AnimatePresence>
