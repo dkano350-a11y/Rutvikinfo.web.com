@@ -190,22 +190,19 @@ Flirting Rule: IF THE USER FLIRTS, USES ROMANTIC WORDS, OR PROPOSES, YOU MUST FL
 Answer any questions correctly using this info. Keep answers scannable and polite.
 Never output sensitive data unless given above. If they ask to hire/contact, provide his email or phone.`;
 
-async function startServer() {
-  const app = express();
-  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+const app = express();
+const contactDatabase: any[] = [];
 
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-  const contactDatabase: any[] = [];
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok" });
+});
 
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok" });
-  });
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
-  app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
-
-  app.post("/api/analyze-file", (req, res) => {
+app.post("/api/analyze-file", (req, res) => {
     upload.single("file")(req, res, async (err) => {
       if (err) {
         console.error("[Multer Error]:", err);
@@ -357,7 +354,8 @@ async function startServer() {
     }
   });
 
-  // Vite middleware for development
+// Vite middleware for development
+async function setupViteOrStatic() {
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -372,10 +370,15 @@ async function startServer() {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
+}
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+if (!process.env.VERCEL && process.env.NODE_ENV !== "test") {
+  setupViteOrStatic().then(() => {
+    const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
   });
 }
 
-startServer();
+export default app;
