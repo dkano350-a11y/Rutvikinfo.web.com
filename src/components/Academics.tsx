@@ -1,5 +1,3 @@
-import React from "react";
-import { motion } from "motion/react";
 import {
   BookOpen,
   Database,
@@ -13,7 +11,7 @@ export default function Academics() {
     {
       year: "2024 (Sem 1) & 2025 (Sem 2)",
       sem: "SEM 1 & 2 — Foundations",
-      icon: <BookOpen size={24} className="text-electric" />,
+      icon: <BookOpen size={18} className="text-electric" />,
       content:
         "Business Management, Accounting Principles, Business Communication, Organizational Behavior, Basic Market Dynamics.",
       color: "border-blue-200",
@@ -21,7 +19,7 @@ export default function Academics() {
     {
       year: "2025",
       sem: "SEM 3 — Core Management & Systems",
-      icon: <Database size={24} className="text-purple-500" />,
+      icon: <Database size={18} className="text-purple-500" />,
       content:
         "MIS Portfolio: Enterprise architecture case studies, DBMS models, Transaction Processing Systems (TPS) for retail chains and healthcare. Technical work: ER Diagrams, SQL query design, data-driven organizational insights.",
       color: "border-purple-200",
@@ -29,7 +27,7 @@ export default function Academics() {
     {
       year: "2026",
       sem: "SEM 4 — Research & Analytics",
-      icon: <Presentation size={24} className="text-emerald-500" />,
+      icon: <Presentation size={18} className="text-emerald-500" />,
       items: [
         {
           title: "BRM Research Thesis",
@@ -49,7 +47,7 @@ export default function Academics() {
     {
       year: "Current 2026",
       sem: "SEM 5 — Marketing Specialization",
-      icon: <Target size={24} className="text-orange-500" />,
+      icon: <Target size={18} className="text-orange-500" />,
       content:
         "Brand Management, Startup Roadmaps, Commercial Property Layout Analysis, Strategic Consumer Outreach.",
       color: "border-orange-200",
@@ -57,15 +55,9 @@ export default function Academics() {
   ];
 
   return (
-    <section id="academics" className="py-24 px-6 relative bg-white/30">
+    <section id="academics" className="py-24 px-6 relative bg-transparent">
       <div className="max-w-4xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="mb-16 text-center"
-        >
+        <div className="mb-16 text-center" >
           <h2 className="font-serif text-3xl md:text-5xl font-bold text-navy mb-4">
             Academic Road
           </h2>
@@ -73,34 +65,11 @@ export default function Academics() {
             BBA Honours journey at AIHM Ahmedabad. Tracking milestones from
             foundation to specialization.
           </p>
-        </motion.div>
+        </div>
 
-        <motion.div
-          variants={{
-            hidden: { opacity: 0 },
-            show: {
-              opacity: 1,
-              transition: { staggerChildren: 0.2 },
-            },
-          }}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: "-50px" }}
-          className="relative border-l-2 border-navy/10 ml-4 md:ml-12 pb-8"
-        >
+        <div className=" relative border-l-2 border-navy/10 ml-4 md:ml-12 pb-8">
           {semesters.map((sem, i) => (
-            <motion.div
-              key={i}
-              variants={{
-                hidden: { opacity: 0, x: -30 },
-                show: {
-                  opacity: 1,
-                  x: 0,
-                  transition: { type: "spring", stiffness: 60, damping: 15 },
-                },
-              }}
-              className="mb-12 relative pl-8 md:pl-12"
-            >
+            <div key={i} className="mb-12 relative pl-8 md:pl-12">
               <div
                 className={`absolute -left-[17px] top-1 w-8 h-8 rounded-full bg-white border-4 ${sem.color} flex items-center justify-center shadow-sm`}
               >
@@ -112,7 +81,7 @@ export default function Academics() {
                   {sem.icon}
                 </div>
                 <div className="text-sm font-bold text-electric mb-1 flex items-center gap-2">
-                  <Sparkles size={14} /> {sem.year}
+                  <Sparkles size={18} /> {sem.year}
                 </div>
                 <h3 className="font-serif text-2xl font-bold text-navy mb-4 items-center gap-2 flex">
                   {sem.sem}
@@ -137,9 +106,9 @@ export default function Academics() {
                   </div>
                 )}
               </div>
-            </motion.div>
+            </div>
           ))}
-        </motion.div>
+        </div>
       </div>
     </section>
   );

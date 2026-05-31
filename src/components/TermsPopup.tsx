@@ -1,5 +1,4 @@
 import React, { useEffect } from "react";
-import { motion, AnimatePresence } from "motion/react";
 import { ShieldCheck, ArrowRight, X } from "lucide-react";
 
 interface TermsPopupProps {
@@ -31,44 +30,27 @@ export default function TermsPopup({
   };
 
   return (
-    <AnimatePresence>
+    <>
       {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.4 }}
-          className="fixed inset-0 z-[8000] bg-cream/90 backdrop-blur-sm flex flex-col items-center justify-center p-4"
-        >
+        <div className="fixed inset-0 z-[8000] bg-cream/90 backdrop-blur-sm flex flex-col items-center justify-center p-4">
           {/* Background Decoration */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div className="absolute top-[-10%] right-[-5%] w-96 h-96 bg-electric/10 rounded-full blur-[100px]"></div>
             <div className="absolute bottom-[-10%] left-[-5%] w-96 h-96 bg-purple-500/10 rounded-full blur-[100px]"></div>
           </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 30, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            transition={{
-              type: "spring",
-              stiffness: 100,
-              damping: 20,
-              delay: 0.1,
-            }}
-            className="bg-white max-w-2xl w-full rounded-3xl p-8 md:p-12 shadow-2xl relative z-10 border border-navy/10"
-          >
+          <div className="bg-white max-w-2xl w-full rounded-3xl p-8 md:p-12 shadow-2xl relative z-10 border border-navy/10">
             {/* Close Button */}
             <button
               onClick={onClose}
               className="absolute top-6 right-6 p-2 rounded-full text-charcoal hover:text-navy hover:bg-black/5 transition-colors"
               aria-label="Close"
             >
-              <X size={20} />
+              <X size={18} />
             </button>
 
             <div className="w-16 h-16 bg-navy/5 text-navy rounded-2xl flex items-center justify-center mb-8">
-              <ShieldCheck size={32} />
+              <ShieldCheck size={18} />
             </div>
 
             <h1 className="font-serif text-3xl md:text-4xl font-bold text-navy mb-4">
@@ -127,9 +109,9 @@ export default function TermsPopup({
                 />
               </button>
             </div>
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
       )}
-    </AnimatePresence>
+    </>
   );
 }

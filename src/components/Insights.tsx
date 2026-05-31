@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, useScroll, useTransform } from "motion/react";
 import {
   ArrowUpRight,
   Clock,
@@ -258,69 +258,66 @@ export default function Insights() {
     <>
       <section
         id="insights"
-        className="py-24 px-6 relative bg-cream/50 border-t border-navy/5"
+        className="py-24 px-6 relative bg-transparent border-t border-navy/5"
       >
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/clean-gray-paper.png')] opacity-[0.01] pointer-events-none"></div>
 
         <div className="max-w-6xl mx-auto relative z-10">
           {/* Header element */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="mb-16 md:flex md:items-end md:justify-between gap-8"
+          <motion.div 
+            initial={{ opacity: 0, y: 30, filter: 'blur(5px)' }}
+            whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="mb-10 md:flex md:items-end md:justify-between gap-8" 
           >
             <div>
               <span className="text-xs font-bold uppercase tracking-widest text-electric bg-electric/10 px-3 py-1.5 rounded-full inline-block mb-3">
                 Publications
               </span>
               <h2 className="font-serif text-3xl md:text-5xl font-bold text-navy mb-4">
-                {isViewingAll ? "Insights Archive" : "Insights & Writing"}
+                {activeCategory === "All" ? "Insights & Writing" : activeCategory}
               </h2>
-              <p className="text-charcoal text-lg max-w-2xl">
+              <p className="text-charcoal text-lg max-w-2xl mt-4">
                 Thoughts, guidelines, and engineering analyses written on AI
                 pipelines, visual programming MVP architecture, and high-convert
                 marketing.
               </p>
             </div>
-
-            <button
-              onClick={() => {
-                setIsViewingAll(!isViewingAll);
-                setSearchQuery("");
-                setActiveCategory("All");
-              }}
-              className="mt-6 md:mt-0 px-6 py-3 bg-navy text-white text-xs font-bold rounded-full hover:bg-electric transition-all self-start shadow-md flex items-center gap-2"
-            >
-              {isViewingAll ? (
-                <>
-                  <ArrowLeft size={14} /> Back to Featured
-                </>
-              ) : (
-                <>
-                  View All Articles & Guides <ChevronRight size={14} />
-                </>
-              )}
-            </button>
           </motion.div>
+
+          {/* Categorization chips - Always Visible */}
+          <div className="flex gap-2 overflow-x-auto scrollbar-none pb-8 mb-4 border-b border-navy/5">
+            {categories.map((cat, idx) => (
+              <button
+                key={idx}
+                onClick={() => {
+                  setActiveCategory(cat);
+                  setIsViewingAll(true);
+                  if (cat === "All") setIsViewingAll(false);
+                }}
+                className={`px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${activeCategory === cat ? "bg-navy text-white shadow-sm" : "bg-white text-charcoal border border-navy/10 hover:bg-cream hover:text-navy"}`}
+              >
+                {cat === "All" ? "Featured & Latest" : cat}
+              </button>
+            ))}
+          </div>
 
           {/* DYNAMIC VIEW FOR BLOG INDEX / ARCHIVE */}
           {isViewingAll ? (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
+            <motion.div 
+              initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              className="space-y-10 mb-20"
+              exit={{ opacity: 0, y: -30 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="space-y-10 mb-20" 
             >
               {/* Filters & Search Row */}
               <div className="bg-white border border-navy/10 p-4 rounded-3xl md:flex md:items-center md:justify-between gap-6 shadow-sm">
                 {/* Search field */}
-                <div className="relative flex-1 mb-4 md:mb-0">
-                  <Search
-                    size={18}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 text-charcoal"
-                  />
-                  <input
+                <div className="relative flex-1">
+                  <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-charcoal" />
+                    <input
                     type="text"
                     placeholder="Search articles & concepts..."
                     value={searchQuery}
@@ -332,33 +329,22 @@ export default function Insights() {
                       onClick={() => setSearchQuery("")}
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-charcoal hover:text-navy"
                     >
-                      <X size={16} />
+                      <X size={18} />
                     </button>
                   )}
-                </div>
-
-                {/* Categorization chips */}
-                <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-2 md:pb-0">
-                  {categories.map((cat, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setActiveCategory(cat)}
-                      className={`px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${activeCategory === cat ? "bg-navy text-white shadow-sm" : "bg-cream/50 text-charcoal border border-navy/5 hover:bg-cream hover:text-navy"}`}
-                    >
-                      {cat === "All" ? "All Topics" : cat}
-                    </button>
-                  ))}
                 </div>
               </div>
 
               {/* Grid block */}
               {filteredPosts.length > 0 ? (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredPosts.map((post) => (
-                    <motion.div
-                      key={post.id}
-                      layoutId={`article-card-${post.id}`}
-                      onClick={() => setSelectedArticle(post)}
+                  {filteredPosts.map((post, index) => (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 50, scale: 0.95 }}
+                      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                      viewport={{ once: true, margin: "-100px" }}
+                      transition={{ duration: 0.6, delay: index * 0.1, type: "spring", stiffness: 100 }}
+                      key={post.id} onClick={() => setSelectedArticle(post)}
                       className="group flex flex-col justify-between bg-white rounded-3xl p-8 border border-navy/10 hover:border-navy/30 hover:shadow-xl transition-all duration-300 relative overflow-hidden cursor-pointer"
                     >
                       <div>
@@ -385,7 +371,7 @@ export default function Insights() {
                           {post.date}
                         </span>
                         <div className="w-8 h-8 rounded-full bg-cream flex items-center justify-center text-navy group-hover:bg-electric group-hover:text-white transition-colors">
-                          <ChevronRight size={14} />
+                          <ChevronRight size={18} />
                         </div>
                       </div>
                     </motion.div>
@@ -406,7 +392,11 @@ export default function Insights() {
             /* STANDARD HOME VIEW */
             <div className="grid md:grid-cols-3 gap-6 mb-20">
               {/* Featured Card */}
-              <motion.div
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9, y: 30 }}
+                whileInView={{ opacity: 1, scale: 1, y: 0 }}
+                viewport={{ once: true, margin: "-100px" }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
                 onClick={() => setSelectedArticle(featuredPost)}
                 className="group flex flex-col justify-between bg-white rounded-3xl p-8 border border-electric/30 hover:border-electric ring-1 ring-electric/5 hover:shadow-2xl transition-all duration-300 relative overflow-hidden cursor-pointer md:col-span-2"
               >
@@ -419,7 +409,7 @@ export default function Insights() {
                         {featuredPost.category}
                       </span>
                       <div className="flex items-center gap-1.5 text-xs text-charcoal font-medium">
-                        <Clock size={12} /> {featuredPost.readTime}
+                        <Clock size={18} /> {featuredPost.readTime}
                       </div>
                     </div>
                     <button
@@ -428,9 +418,9 @@ export default function Insights() {
                       title="Copy Link"
                     >
                       {copiedId === featuredPost.id ? (
-                        <Check size={16} className="text-emerald-500" />
+                        <Check size={18} className="text-emerald-500" />
                       ) : (
-                        <Link size={16} />
+                        <Link size={18} />
                       )}
                     </button>
                   </div>
@@ -449,17 +439,20 @@ export default function Insights() {
                     {featuredPost.date}
                   </span>
                   <div className="flex items-center gap-2 text-xs font-bold text-electric">
-                    Read Article <ArrowUpRight size={14} />
+                    Read Article <ArrowUpRight size={18} />
                   </div>
                 </div>
               </motion.div>
 
               {/* Other Regular posts */}
               <div className="flex flex-col gap-6">
-                {regularPosts.map((post) => (
-                  <motion.div
-                    key={post.id}
-                    onClick={() => setSelectedArticle(post)}
+                {regularPosts.map((post, index) => (
+                  <motion.div 
+                    initial={{ opacity: 0, x: 50 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true, margin: "-50px" }}
+                    transition={{ duration: 0.6, delay: 0.2 + index * 0.2, type: "spring", stiffness: 100 }}
+                    key={post.id} onClick={() => setSelectedArticle(post)}
                     className="group bg-white rounded-3xl p-6 border border-navy/10 hover:border-navy/30 hover:shadow-xl transition-all duration-300 relative flex flex-col justify-between cursor-pointer flex-1"
                   >
                     <div>
@@ -473,9 +466,9 @@ export default function Insights() {
                           title="Copy Link"
                         >
                           {copiedId === post.id ? (
-                            <Check size={14} className="text-emerald-500" />
+                            <Check size={18} className="text-emerald-500" />
                           ) : (
-                            <Link size={14} />
+                            <Link size={18} />
                           )}
                         </button>
                       </div>
@@ -492,10 +485,7 @@ export default function Insights() {
                       <span className="text-[11px] text-charcoal font-bold">
                         {post.date}
                       </span>
-                      <ChevronRight
-                        size={14}
-                        className="text-navy group-hover:text-electric transition-colors"
-                      />
+                      <ChevronRight size={18} className="text-navy group-hover:text-electric transition-colors" />
                     </div>
                   </motion.div>
                 ))}
@@ -504,12 +494,12 @@ export default function Insights() {
           )}
 
           {/* Newsletter Box */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
+          <motion.div 
+            initial={{ opacity: 0, y: 60 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="bg-navy rounded-3xl p-8 md:p-12 relative overflow-hidden"
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="bg-navy rounded-3xl p-8 md:p-12 relative overflow-hidden" 
           >
             <div className="absolute inset-0 bg-gradient-to-r from-navy via-[#0d1b3e] to-[#040817] pointer-events-none"></div>
             <div className="absolute top-0 right-0 w-64 h-64 bg-electric/15 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
@@ -541,8 +531,7 @@ export default function Insights() {
                   </div>
                   <button
                     type="submit"
-                    disabled={subscribed}
-                    className="px-6 py-4 bg-electric text-white font-bold rounded-xl hover:bg-blue-500 transition-colors flex items-center gap-2 group disabled:opacity-80 disabled:cursor-not-allowed text-sm"
+                    disabled={subscribed} className="px-6 py-4 bg-electric text-white font-bold rounded-xl hover:bg-blue-500 transition-colors flex items-center gap-2 group disabled:opacity-80 disabled:cursor-not-allowed text-sm"
                   >
                     {subscribed ? (
                       <>
@@ -551,8 +540,7 @@ export default function Insights() {
                     ) : (
                       <>
                         <Send
-                          size={18}
-                          className="group-hover:translate-x-1 transition-transform"
+                          size={18} className="group-hover:translate-x-1 transition-transform"
                         />
                       </>
                     )}
@@ -568,19 +556,19 @@ export default function Insights() {
       </section>
 
       {/* DETAILED ARTICLE READER MODAL */}
-      <AnimatePresence>
+      
         {selectedArticle && (
-          <motion.div
+          <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 md:p-8 bg-navy/85 backdrop-blur-md"
-            onClick={() => setSelectedArticle(null)}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 md:p-8 bg-navy/85 backdrop-blur-md" onClick={() => setSelectedArticle(null)}
           >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 35 }}
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 35 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
               className="bg-white w-full max-w-3xl h-[90vh] md:h-[85vh] rounded-3xl overflow-hidden shadow-2xl relative border border-navy/10 flex flex-col text-navy"
             >
@@ -600,7 +588,7 @@ export default function Insights() {
                   className="w-9 h-9 bg-navy/5 text-navy hover:bg-navy hover:text-white rounded-full flex items-center justify-center transition-all border border-navy/10"
                   title="Close Reader"
                 >
-                  <X size={16} />
+                  <X size={18} />
                 </button>
               </div>
 
@@ -649,7 +637,7 @@ export default function Insights() {
               {/* Share & actions footer */}
               <div className="p-6 bg-cream/30 border-t border-navy/5 flex flex-col sm:flex-row justify-between items-center gap-4 shrink-0">
                 <span className="text-xs font-bold text-navy flex items-center gap-1.5 uppercase tracking-wide">
-                  <Share2 size={13} /> Spread the word
+                  <Share2 size={18} /> Spread the word
                 </span>
 
                 <div className="flex gap-2 w-full sm:w-auto">
@@ -658,7 +646,7 @@ export default function Insights() {
                     onClick={() => handleShare("twitter", selectedArticle)}
                     className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-sky-500 hover:bg-sky-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition-all hover:scale-105"
                   >
-                    <Twitter size={14} /> X / Twitter
+                    <Twitter size={18} /> X / Twitter
                   </button>
 
                   {/* Share LinkedIn */}
@@ -666,7 +654,7 @@ export default function Insights() {
                     onClick={() => handleShare("linkedin", selectedArticle)}
                     className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-blue-700 hover:bg-blue-800 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition-all hover:scale-105"
                   >
-                    <Linkedin size={14} /> LinkedIn
+                    <Linkedin size={18} /> LinkedIn
                   </button>
 
                   {/* Share WhatsApp */}
@@ -674,7 +662,7 @@ export default function Insights() {
                     onClick={() => handleShare("whatsapp", selectedArticle)}
                     className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition-all hover:scale-105"
                   >
-                    <MessageSquare size={14} /> WhatsApp
+                    <MessageSquare size={18} /> WhatsApp
                   </button>
 
                   {/* Copy Link */}
@@ -684,9 +672,9 @@ export default function Insights() {
                     title="Copy Article Link"
                   >
                     {copiedId === selectedArticle.id ? (
-                      <Check size={16} className="text-emerald-500" />
+                      <Check size={18} className="text-emerald-500" />
                     ) : (
-                      <Link size={16} />
+                      <Link size={18} />
                     )}
                   </button>
                 </div>
@@ -694,7 +682,6 @@ export default function Insights() {
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
     </>
   );
 }

@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, Download, FileText, CheckCircle2, Loader2 } from "lucide-react";
 
 interface ResumeModalProps {
@@ -14,38 +14,55 @@ export default function ResumeModal({
   onDownload,
 }: ResumeModalProps) {
   const [isDownloading, setIsDownloading] = useState(false);
+  const resumeRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
   const handleDownload = async () => {
     setIsDownloading(true);
-    await onDownload();
-    // Keep it light for a short duration so user sees the feedback
-    setTimeout(() => setIsDownloading(false), 800);
+    try {
+      if (resumeRef.current) {
+        // @ts-ignore
+        const html2pdf = (await import('html2pdf.js')).default;
+        const opt = {
+          margin:       [0.5, 0, 0.5, 0] as [number, number, number, number], // top, left, bottom, right
+          filename:     'Rutvik_Dangar_Resume.pdf',
+          image:        { type: 'jpeg' as const, quality: 0.98 },
+          html2canvas:  { scale: 2, useCORS: true },
+          jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' as const }
+        };
+        await html2pdf().set(opt).from(resumeRef.current).save();
+      } else {
+        await onDownload(); // fallback
+      }
+    } catch (e) {
+      console.error('Download Error:', e);
+      try {
+        await onDownload();
+      } catch (err) {
+        console.error(err);
+      }
+    } finally {
+      setTimeout(() => setIsDownloading(false), 800);
+    }
   };
 
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3, ease: "easeInOut" }}
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 md:p-8 bg-navy/80 backdrop-blur-md"
-          onClick={onClose}
-        >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.98, y: 15 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.98, y: 15 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            onClick={(e) => e.stopPropagation()}
-            className="bg-cream w-full max-w-4xl h-[90vh] md:h-[85vh] rounded-3xl overflow-hidden shadow-2xl relative border border-white/20 flex flex-col"
-          >
+  if (!isOpen || !mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[999999] flex items-center justify-center p-4 sm:p-6 md:p-8 bg-navy/80 backdrop-blur-md" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()}
+        className="bg-cream w-full max-w-4xl h-[90vh] md:h-[85vh] rounded-3xl overflow-hidden shadow-2xl relative border border-white/20 flex flex-col"
+      >
             {/* Header bar */}
             <div className="w-full bg-navy p-6 flex items-center justify-between text-white relative z-10 border-b border-white/5">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-electric/15 flex items-center justify-center text-electric">
-                  <FileText size={20} />
+                  <FileText size={18} />
                 </div>
                 <div>
                   <h3 className="font-serif text-xl font-bold leading-tight">
@@ -57,17 +74,17 @@ export default function ResumeModal({
                 </div>
               </div>
               <button
-                onClick={onClose}
-                className="w-10 h-10 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center transition-all duration-200 border border-white/10"
+                onClick={onClose} className="w-10 h-10 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center transition-all duration-200 border border-white/10"
               >
                 <X size={18} />
               </button>
             </div>
 
             {/* Content Body - Resume view */}
-            <div className="flex-1 overflow-y-auto p-0 md:p-8 bg-black/5 flex flex-col gap-8 items-center cursor-text">
+            <div className="flex-1 overflow-y-auto p-0 md:p-8 bg-black/5 flex flex-col items-center cursor-text">
+              <div ref={resumeRef} className="w-full max-w-3xl flex flex-col gap-8">
               {/* PAGE 1 */}
-              <div className="w-full max-w-3xl bg-white shadow-xl shadow-black/5 border border-black/5 p-10 md:p-14 shrink-0 transition-transform hover:scale-[1.01] duration-300">
+              <div className="w-full bg-white shadow-xl shadow-black/5 border border-black/5 p-10 md:p-14 shrink-0 transition-transform hover:scale-[1.01] duration-300">
                 <div className="text-center mb-8 border-b border-black/10 pb-6">
                   <h1 className="text-3xl md:text-4xl font-sans font-black text-charcoal tracking-wide mb-3">
                     DANGAR RUTVIKKUMAR ALPESHBHAI
@@ -292,25 +309,24 @@ export default function ResumeModal({
                   </div>
                 </div>
               </div>
+              </div>
             </div>
 
             {/* Action Links bar footer */}
             <div className="p-5 bg-white border-t border-navy/5 flex flex-col sm:flex-row gap-3 items-center justify-between shrink-0 shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
               <span className="text-xs text-charcoal font-bold uppercase tracking-wider flex items-center gap-1.5 ml-2">
-                <CheckCircle2 size={14} className="text-emerald-500" />{" "}
+                <CheckCircle2 size={18} className="text-emerald-500" />{" "}
                 Authorized AI-Generated Preview
               </span>
               <div className="flex gap-3 w-full sm:w-auto">
                 <button
-                  onClick={onClose}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all hover:scale-105 duration-200 bg-charcoal/5 text-charcoal shadow-sm hover:bg-charcoal/10"
+                  onClick={onClose} className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all hover:scale-105 duration-200 bg-charcoal/5 text-charcoal shadow-sm hover:bg-charcoal/10"
                 >
                   Close
                 </button>
                 <button
                   onClick={handleDownload}
-                  disabled={isDownloading}
-                  className={`w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-sm font-bold transition-all duration-300 shadow-md ring-2 ring-transparent focus:ring-electric/30 ${
+                  disabled={isDownloading} className={`w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-sm font-bold transition-all duration-300 shadow-md ring-2 ring-transparent focus:ring-electric/30 ${
                     isDownloading
                       ? "bg-electric/60 text-white shadow-none pointer-events-none scale-95"
                       : "bg-electric text-white hover:bg-blue-600 hover:scale-105"
@@ -318,20 +334,19 @@ export default function ResumeModal({
                 >
                   {isDownloading ? (
                     <>
-                      <Loader2 size={16} className="animate-spin" />{" "}
+                      <Loader2 size={18} className="animate-spin" />{" "}
                       Downloading...
                     </>
                   ) : (
                     <>
-                      <Download size={16} /> Download Full PDF
+                      <Download size={18} /> Download Full PDF
                     </>
                   )}
                 </button>
               </div>
             </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+          </div>
+        </div>,
+        document.body
   );
 }

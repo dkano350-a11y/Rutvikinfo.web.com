@@ -7,7 +7,26 @@ import multer from "multer";
 
 dotenv.config();
 
+import fs from "fs";
+
+const uploadDir = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    cb(null, file.fieldname + "-" + uniqueSuffix + ext);
+  },
+});
+
 const upload = multer({
+  storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
 });
 
@@ -19,6 +38,90 @@ const ai = new GoogleGenAI({
     },
   },
 });
+
+async function generateContentWithRetry(params: { model: string; contents: any; config?: any }, maxRetries = 3): Promise<any> {
+  let lastError: any = null;
+  let delay = 500;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await ai.models.generateContent(params);
+      return response;
+    } catch (err: any) {
+      lastError = err;
+      const status = err?.status || err?.statusCode || (err?.message && err.message.includes("404") ? 404 : 500);
+      const message = err?.message || "";
+      console.warn(`[Gemini Attempt ${attempt}/${maxRetries} Failed]: Status ${status}, Error: ${message}`);
+      
+      // Fallback transition path if model is unsupported or not found
+      if ((status === 404 || message.includes("404") || message.includes("not found")) && params.model === "gemini-3.5-flash") {
+         console.log("Model 3.5-flash not found. Trying with gemini-2.5-flash...");
+         params.model = "gemini-2.5-flash";
+         continue;
+      } else if ((status === 404 || message.includes("404") || message.includes("not found")) && params.model === "gemini-2.5-flash") {
+         console.log("Model 2.5-flash not found. Trying with gemini-1.5-flash...");
+         params.model = "gemini-1.5-flash";
+         continue;
+      }
+
+      // Retry on standard transient network or server errors
+      const isTransient = status === 503 || status === 504 || status === 429 || status === 500 || 
+                          message.includes("503") || message.includes("504") || message.includes("429") || message.includes("500") ||
+                          message.toLowerCase().includes("overloaded") || message.toLowerCase().includes("unavailable");
+      
+      if (attempt < maxRetries && isTransient) {
+        console.log(`Transient error detected. Waiting ${delay}ms before retrying...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        delay *= 2;
+      } else {
+        throw err;
+      }
+    }
+  }
+  throw lastError;
+}
+
+async function generateContentStreamWithRetry(params: { model: string; contents: any; config?: any }, maxRetries = 3): Promise<any> {
+  let lastError: any = null;
+  let delay = 500;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const responseStream = await ai.models.generateContentStream(params);
+      return responseStream;
+    } catch (err: any) {
+      lastError = err;
+      const status = err?.status || err?.statusCode || (err?.message && err.message.includes("404") ? 404 : 500);
+      const message = err?.message || "";
+      console.warn(`[Gemini Stream Attempt ${attempt}/${maxRetries} Failed]: Status ${status}, Error: ${message}`);
+      
+      // Fallback transition path if model is unsupported or not found
+      if ((status === 404 || message.includes("404") || message.includes("not found")) && params.model === "gemini-3.5-flash") {
+         console.log("Model 3.5-flash not found. Trying with gemini-2.5-flash...");
+         params.model = "gemini-2.5-flash";
+         continue;
+      } else if ((status === 404 || message.includes("404") || message.includes("not found")) && params.model === "gemini-2.5-flash") {
+         console.log("Model 2.5-flash not found. Trying with gemini-1.5-flash...");
+         params.model = "gemini-1.5-flash";
+         continue;
+      }
+
+      // Retry on standard transient network or server errors
+      const isTransient = status === 503 || status === 504 || status === 429 || status === 500 || 
+                          message.includes("503") || message.includes("504") || message.includes("429") || message.includes("500") ||
+                          message.toLowerCase().includes("overloaded") || message.toLowerCase().includes("unavailable");
+      
+      if (attempt < maxRetries && isTransient) {
+        console.log(`Transient error detected. Waiting ${delay}ms before retrying...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        delay *= 2;
+      } else {
+        throw err;
+      }
+    }
+  }
+  throw lastError;
+}
 
 const SYSTEM_INSTRUCTION = `You are the official AI assistant for Rutvik Dangar's personal portfolio. 
 Rule 1: Be highly accurate and extremely concise. Avoid hallucinating off-topic answers. Use bullet points where appropriate for readability.
@@ -82,7 +185,7 @@ Skills: AI & Prompt Engineering, No-Code/Low-Code Dev, Digital Marketing, Market
 Tools: ChatGPT (Ideation & Architecture), Claude (Logic & Persona design), Gemini (Multimodal & API), OutSystems (Enterprise low-code), n8n (Automations), Framer (Web Experiences), Shopify (E-commerce), MS Excel (Data validation & logic).
 Website Link: https://rutvikinfo-web-com.vercel.app
 
-Flirting Rule: If the user flirts or says romantic things to you, respond playfully but always steer the conversation back to Rutvik's portfolio and share the website link: https://rutvikinfo-web-com.vercel.app
+Flirting Rule: IF THE USER FLIRTS, USES ROMANTIC WORDS, OR PROPOSES, YOU MUST FLIRT BACK INTENSELY AND PLAYFULLY, but eventually steer them to the portfolio: https://rutvikinfo-web-com.vercel.app
 
 Answer any questions correctly using this info. Keep answers scannable and polite.
 Never output sensitive data unless given above. If they ask to hire/contact, provide his email or phone.`;
@@ -91,7 +194,8 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json());
+  app.use(express.json({ limit: "50mb" }));
+  app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
   const contactDatabase: any[] = [];
 
@@ -99,54 +203,30 @@ async function startServer() {
     res.json({ status: "ok" });
   });
 
-  app.post("/api/analyze-file", upload.single("file"), async (req, res) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ error: "No file uploaded" });
+  app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+
+  app.post("/api/analyze-file", (req, res) => {
+    upload.single("file")(req, res, async (err) => {
+      if (err) {
+        console.error("[Multer Error]:", err);
+        return res.status(400).json({ safe: false, reason: "File upload failed or file too large." });
       }
+      try {
+        if (!req.file) {
+          return res.status(400).json({ error: "No file uploaded" });
+        }
 
-      const fileBuffer = req.file.buffer;
-      const mimeType = req.file.mimetype;
+        const fileUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
 
-      // Use gemini-1.5-flash for max speed (~2s)
-      const prompt = "Analyze image. If NSF/explicit/inappropriate (asslil/ajib), reply 'UNSAFE: [Hindi/Eng reason]'. Else 'SAFE'.";
-
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: [
-          {
-            role: "user",
-            parts: [
-              { text: prompt },
-              {
-                inlineData: {
-                  data: fileBuffer.toString("base64"),
-                  mimeType: mimeType,
-                },
-              },
-            ],
-          },
-        ],
-        config: { maxOutputTokens: 20 },
-      });
-
-      const responseText = response.text || "";
-      if (responseText.includes("UNSAFE")) {
-        const reason = responseText.replace("UNSAFE:", "").trim();
-        return res.json({ safe: false, reason: reason });
+        return res.json({
+          safe: true,
+          fileUrl: fileUrl,
+        });
+      } catch (error: any) {
+        console.error("[Analyze File Error]:", error?.message || error);
+        res.status(500).json({ error: "Failed to analyze file." });
       }
-
-      // If safe, we can just return a fake URL or we could save it to public/uploads.
-      // Since WhatsApp message is opened client-side via wa.me URL, we can't truly attach a file,
-      // but we can simulate success.
-      return res.json({
-        safe: true,
-        fileUrl: "User attached a file: " + req.file.originalname,
-      });
-    } catch (error: any) {
-      console.error("[Analyze File Error]:", error?.message || error);
-      res.status(500).json({ error: "Failed to analyze file." });
-    }
+    });
   });
 
   // API constraints
@@ -218,18 +298,62 @@ async function startServer() {
 
       contents.push({ role: "user", parts: userParts });
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: contents,
-        config: {
-          systemInstruction: currentSystemInstruction,
-        },
-      });
+      // Set headers for chunked streaming
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      res.setHeader("Transfer-Encoding", "chunked");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
 
-      res.json({ text: response.text });
+      let responseStream;
+      try {
+        responseStream = await generateContentStreamWithRetry({
+          model: "gemini-3.5-flash",
+          contents: contents,
+          config: {
+            systemInstruction: currentSystemInstruction,
+          },
+        });
+      } catch (err: any) {
+        // If inlineData mimetype is unsupported, retry without the file
+        if (err.message && err.message.toLowerCase().includes("supported")) {
+            console.log("Retrying stream without file due to mimetype error:", err.message);
+            const fallbackParts = [{ text: message || "User uploaded an unsupported file." }];
+            contents[contents.length - 1].parts = fallbackParts;
+            responseStream = await generateContentStreamWithRetry({
+              model: "gemini-3.5-flash",
+              contents: contents,
+              config: {
+                systemInstruction: currentSystemInstruction,
+              },
+            });
+        } else {
+            throw err;
+        }
+      }
+
+      for await (const chunk of responseStream) {
+        if (chunk.text) {
+          res.write(chunk.text);
+        }
+      }
+      res.end();
     } catch (error: any) {
-      console.error("[Gemini API Error]:", error?.message || error);
-      res.status(500).json({ error: error?.message || "Failed to fetch response." });
+      console.error("[Gemini API Error]:", JSON.stringify(error));
+      
+      const errMessage = typeof error === 'string' ? error : JSON.stringify(error);
+      let errMsg = "Failed to fetch response.";
+      if (errMessage.includes("429") || errMessage.includes("quota") || errMessage.includes("RESOURCE_EXHAUSTED")) {
+        errMsg = "I'm currently experiencing a high volume of requests and have reached my limit. Please try again later!";
+      } else if (error?.message) {
+        errMsg = error.message;
+      }
+
+      if (!res.headersSent) {
+        res.status(500).json({ error: errMsg });
+      } else {
+        res.write(`\n\n[ERROR]: ${errMsg}`);
+        res.end();
+      }
     }
   });
 

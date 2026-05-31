@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
 import {
   Send,
   Phone,
@@ -12,14 +11,16 @@ import {
   MessageCircle,
   CheckCircle2,
 } from "lucide-react";
+import { db } from "../firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { useToast } from "../ToastContext";
 
 interface ContactProps {
   onProtectedAction?: (action: () => void) => void;
 }
 
 export default function Contact({ onProtectedAction }: ContactProps) {
-  const [success, setSuccess] = useState(false);
-
+  const { addToast } = useToast();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -28,8 +29,8 @@ export default function Contact({ onProtectedAction }: ContactProps) {
 
   const [file, setFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
+  const [uploadedFileUrl, setUploadedFileUrl] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
 
   const handleProtectedRedirect = (
     e: React.MouseEvent<HTMLAnchorElement>,
@@ -63,7 +64,6 @@ export default function Contact({ onProtectedAction }: ContactProps) {
     if (!selected) return;
 
     setFile(selected);
-    setAnalyzeError(null);
     setIsAnalyzing(true);
 
     // Show preview immediately
@@ -78,6 +78,9 @@ export default function Contact({ onProtectedAction }: ContactProps) {
     }
 
     try {
+      // Simulate 1.5s network delay for user experience per request
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
       const formDataObj = new FormData();
       formDataObj.append("file", selected);
 
@@ -88,16 +91,22 @@ export default function Contact({ onProtectedAction }: ContactProps) {
 
       const data = await res.json();
       if (!data.safe) {
-        setAnalyzeError(data.reason || "This content is not allowed.");
+        addToast(data.reason || "This content is not allowed.", "error");
         setFile(null);
         setFilePreview(null);
+        setUploadedFileUrl(null);
         if (e.target) e.target.value = "";
+      } else {
+        if (data.fileUrl) {
+          setUploadedFileUrl(data.fileUrl);
+        }
       }
     } catch (err) {
       console.error(err);
-      setAnalyzeError("Failed to analyze file. Please try again.");
+      addToast("Failed to analyze file. Please try again.", "error");
       setFile(null);
       setFilePreview(null);
+      setUploadedFileUrl(null);
       if (e.target) e.target.value = "";
     } finally {
       setIsAnalyzing(false);
@@ -108,22 +117,50 @@ export default function Contact({ onProtectedAction }: ContactProps) {
     e.preventDefault();
     if (isAnalyzing) return; // wait for analysis
 
-    const action = () => {
-      const attachmentText = file
-        ? `\n[Attached File Processed Safely: ${file.name}]`
-        : "";
+    const action = async () => {
+      let attachmentText = "";
+      if (uploadedFileUrl) {
+        attachmentText = `\n\nAttachments:\n${uploadedFileUrl}`;
+      } else if (file) {
+        attachmentText = `\n[Attached File Processed Safely: ${file.name}]`;
+      }
+
       const text = `Hi Rutvik, my name is ${formData.name}.\nEmail: ${formData.email}\n\nMessage:\n${formData.message}${attachmentText}`;
+
+      // Open WhatsApp synchronously before any await so browser popup blocker doesn't intercept it
       window.open(
         `https://wa.me/919328796324?text=${encodeURIComponent(text)}`,
         "_blank",
         "noopener,noreferrer",
       );
 
-      setSuccess(true);
+      addToast("Message delivered successfully!", "success");
       setFormData({ name: "", email: "", message: "" });
       setFile(null);
       setFilePreview(null);
-      setTimeout(() => setSuccess(false), 5000);
+      setUploadedFileUrl(null);
+
+      try {
+        // Also fire off to the local /api/contact to log it via keepalive fetch
+        fetch("/api/contact", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            keepalive: true,
+            body: JSON.stringify({ name: formData.name, email: formData.email, message: formData.message }),
+        }).catch(() => {});
+
+        // Dont await this, let Firebase handle in background
+        addDoc(collection(db, "messages"), {
+          name: formData.name,
+          email: formData.email,
+          message: formData.message,
+          attachmentUrl: uploadedFileUrl || null,
+          attachmentName: file ? file.name : null,
+          createdAt: serverTimestamp(),
+        }).catch((err) => console.error("Firebase save failed:", err));
+      } catch (error: any) {
+        console.error("Error preparing save:", error);
+      }
     };
 
     if (onProtectedAction) {
@@ -134,17 +171,11 @@ export default function Contact({ onProtectedAction }: ContactProps) {
   };
 
   return (
-    <section id="contact" className="py-24 px-6 relative bg-white">
+    <section id="contact" className="py-24 px-6 relative bg-transparent">
       <div className="max-w-6xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="grid md:grid-cols-2 gap-16 items-start"
-        >
+        <div className="grid md:grid-cols-2 gap-16 items-start" >
           <div>
-            <h2 className="font-serif text-4xl md:text-6xl font-bold text-navy mb-6">
+            <h2 className="reveal font-serif text-4xl md:text-6xl font-bold text-navy mb-6">
               Let's Build Something Together 🚀
             </h2>
             <p className="text-xl text-charcoal mb-10 leading-relaxed">
@@ -158,7 +189,7 @@ export default function Contact({ onProtectedAction }: ContactProps) {
                 className="flex items-center gap-4 text-lg text-navy font-medium hover:text-electric transition-colors group"
               >
                 <span className="w-12 h-12 bg-cream rounded-full flex items-center justify-center group-hover:bg-electric/10 transition-colors">
-                  <Phone className="text-electric" size={24} />
+                  <Phone className="text-electric" size={18} />
                 </span>
                 +91 9328796324
               </a>
@@ -174,13 +205,13 @@ export default function Contact({ onProtectedAction }: ContactProps) {
                 className="flex items-center gap-4 text-lg text-navy font-medium hover:text-electric transition-colors group"
               >
                 <span className="w-12 h-12 bg-cream rounded-full flex items-center justify-center group-hover:bg-electric/10 transition-colors">
-                  <Mail className="text-electric" size={24} />
+                  <Mail className="text-electric" size={18} />
                 </span>
                 rutvikdangar20@gmail.com
               </a>
               <div className="flex items-center gap-4 text-lg text-navy font-medium">
                 <span className="w-12 h-12 bg-cream rounded-full flex items-center justify-center">
-                  <MapPin className="text-electric" size={24} />
+                  <MapPin className="text-electric" size={18} />
                 </span>
                 Ahmedabad, Gujarat, India
               </div>
@@ -199,7 +230,7 @@ export default function Contact({ onProtectedAction }: ContactProps) {
                 rel="noopener noreferrer"
                 className="w-12 h-12 bg-navy text-white rounded-full flex items-center justify-center hover:-translate-y-1 hover:shadow-lg transition-all duration-300"
               >
-                <Linkedin size={20} />
+                <Linkedin size={18} />
               </a>
               <a
                 href="tel:+919328796324"
@@ -208,7 +239,7 @@ export default function Contact({ onProtectedAction }: ContactProps) {
                 }
                 className="w-12 h-12 bg-navy text-white rounded-full flex items-center justify-center hover:-translate-y-1 hover:shadow-lg transition-all duration-300"
               >
-                <Phone size={20} />
+                <Phone size={18} />
               </a>
               <a
                 href="https://github.com/Rutvik-Dangar"
@@ -219,7 +250,7 @@ export default function Contact({ onProtectedAction }: ContactProps) {
                 rel="noopener noreferrer"
                 className="w-12 h-12 bg-navy text-white rounded-full flex items-center justify-center hover:-translate-y-1 hover:shadow-lg transition-all duration-300"
               >
-                <Github size={20} />
+                <Github size={18} />
               </a>
               <a
                 href="mailto:rutvikdangar20@gmail.com"
@@ -232,7 +263,7 @@ export default function Contact({ onProtectedAction }: ContactProps) {
                 }
                 className="w-12 h-12 bg-navy text-white rounded-full flex items-center justify-center hover:-translate-y-1 hover:shadow-lg transition-all duration-300"
               >
-                <Mail size={20} />
+                <Mail size={18} />
               </a>
               <a
                 href="https://instagram.com/rutvik_dangar_4"
@@ -246,7 +277,7 @@ export default function Contact({ onProtectedAction }: ContactProps) {
                 rel="noopener noreferrer"
                 className="w-12 h-12 text-white rounded-full flex items-center justify-center hover:-translate-y-1 hover:shadow-lg transition-all duration-300 bg-gradient-to-tr from-yellow-500 via-pink-500 to-purple-600"
               >
-                <Instagram size={20} />
+                <Instagram size={18} />
               </a>
               <a
                 href="https://wa.me/qr/JNPRPQRBK4SSC1"
@@ -257,32 +288,13 @@ export default function Contact({ onProtectedAction }: ContactProps) {
                 rel="noopener noreferrer"
                 className="w-12 h-12 bg-[#25D366] text-white rounded-full flex items-center justify-center hover:-translate-y-1 hover:shadow-lg transition-all duration-300"
               >
-                <MessageCircle size={20} />
+                <MessageCircle size={18} />
               </a>
             </div>
           </div>
 
-          <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="bg-cream p-8 rounded-3xl border border-navy/5"
-          >
+          <div className="bg-cream p-8 rounded-3xl border border-navy/5" >
             <form onSubmit={handleSubmit} className="space-y-6">
-              <AnimatePresence>
-                {success && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className="bg-green-100 border border-green-200 text-green-800 p-4 rounded-xl flex items-center justify-center gap-2 font-bold mb-6"
-                  >
-                    <CheckCircle2 size={18} className="text-green-600" />{" "}
-                    Message delivered successfully!
-                  </motion.div>
-                )}
-              </AnimatePresence>
               <div>
                 <label
                   htmlFor="name"
@@ -297,7 +309,7 @@ export default function Contact({ onProtectedAction }: ContactProps) {
                   onChange={handleChange}
                   required
                   className="w-full px-4 py-3 rounded-xl border border-navy/10 bg-white focus:outline-none focus:ring-2 focus:ring-electric/50 transition-shadow"
-                  placeholder="Elon Musk"
+                  placeholder="Your full name"
                 />
               </div>
 
@@ -315,7 +327,7 @@ export default function Contact({ onProtectedAction }: ContactProps) {
                   onChange={handleChange}
                   required
                   className="w-full px-4 py-3 rounded-xl border border-navy/10 bg-white focus:outline-none focus:ring-2 focus:ring-electric/50 transition-shadow"
-                  placeholder="elon@x.com"
+                  placeholder="your@email.com"
                 />
               </div>
 
@@ -333,7 +345,7 @@ export default function Contact({ onProtectedAction }: ContactProps) {
                   required
                   rows={4}
                   className="w-full px-4 py-3 rounded-xl border border-navy/10 bg-white focus:outline-none focus:ring-2 focus:ring-electric/50 transition-shadow resize-none"
-                  placeholder="Hey Rutvik, loved your portfolio..."
+                  placeholder="Tell me about your project or idea..."
                 ></textarea>
               </div>
 
@@ -359,7 +371,7 @@ export default function Contact({ onProtectedAction }: ContactProps) {
                     ) : file ? (
                       <div className="flex flex-col gap-3 relative z-10">
                         <div className="flex items-center gap-3">
-                          <CheckCircle2 size={20} className="text-green-600" />
+                          <CheckCircle2 size={18} className="text-green-600" />
                           <span className="font-medium truncate max-w-[200px] md:max-w-xs text-charcoal">
                             {file.name} (Safe)
                           </span>
@@ -390,39 +402,26 @@ export default function Contact({ onProtectedAction }: ContactProps) {
                       </div>
                     ) : (
                       <div className="flex items-center gap-3 text-charcoal">
-                        <Upload size={20} />
+                        <Upload size={18} />
                         <span>Upload a file or photo</span>
                       </div>
                     )}
                   </div>
                 </div>
-                {analyzeError && (
-                  <motion.p
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    className="text-red-500 text-sm mt-2 font-medium"
-                  >
-                    Upload Canceled: {analyzeError}
-                  </motion.p>
-                )}
               </div>
 
               <button
                 type="submit"
-                disabled={success || isAnalyzing}
+                disabled={isAnalyzing}
                 className="w-full py-4 bg-navy text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-electric transition-colors disabled:opacity-70"
               >
-                {success ? (
-                  <>Messages Sent! ✨</>
-                ) : (
-                  <>
-                    Send Messages <Send size={18} />
-                  </>
-                )}
+                <>
+                  Send Messages <Send size={18} />
+                </>
               </button>
             </form>
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
       </div>
     </section>
   );

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { createPortal } from "react-dom";
 import {
   MessageSquare,
   X,
@@ -102,6 +102,8 @@ export default function Chatbot() {
 
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [adminInstructions, setAdminInstructions] = useState("");
+  const [progress, setProgress] = useState(0);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -136,7 +138,9 @@ export default function Chatbot() {
       try {
         const parsed = JSON.parse(saved);
         if (parsed.length > 0) setMessages(parsed);
-      } catch (e) {}
+      } catch (e) {
+        // ignore
+      }
     }
     const savedAdmin = localStorage.getItem("rutvik_admin_instructions");
     if (savedAdmin) {
@@ -145,7 +149,11 @@ export default function Chatbot() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("rutvik_chat_history", JSON.stringify(messages));
+    try {
+      localStorage.setItem("rutvik_chat_history", JSON.stringify(messages));
+    } catch (e) {
+      console.warn("Could not save to localStorage, likely due to size limits.");
+    }
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isOpen]);
 
@@ -196,6 +204,7 @@ export default function Chatbot() {
     ]);
     setConfirmDialog(null);
     setShowOptions(false);
+    showToast("Conversation reset successfully!");
   };
 
   const deleteChat = () => {
@@ -205,6 +214,12 @@ export default function Chatbot() {
     setConfirmDialog(null);
     setShowOptions(false);
     setIsOpen(false);
+    showToast("Conversation deleted successfully!");
+  };
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
   };
 
   const handleSend = async (text: string) => {
@@ -231,6 +246,11 @@ export default function Chatbot() {
     
     removeFile();
     setIsLoading(true);
+    setProgress(0);
+
+    const progressInterval = setInterval(() => {
+      setProgress((prev) => (prev < 90 ? prev + Math.floor(Math.random() * 15) + 5 : 95));
+    }, 400);
 
     try {
       const res = await fetch("/api/chat", {
@@ -244,30 +264,61 @@ export default function Chatbot() {
         }),
       });
 
-      const data = await res.json();
+      clearInterval(progressInterval);
+      setProgress(100);
 
-      if (data.text) {
-        setMessages((prev) => [
-          ...prev,
-          { id: Date.now().toString(), role: "ai", text: data.text },
-        ]);
-      } else {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: Date.now().toString(),
-            role: "ai",
-            text: "Sorry, I couldn't process that right now.",
-          },
-        ]);
+      if (!res.ok) {
+        let fallbackMessage = "Connection error. Please try again later.";
+        try {
+          const errData = await res.json();
+          if (errData.error) fallbackMessage = errData.error;
+        } catch (_) {
+          try {
+            const rawText = await res.text();
+            if (rawText) fallbackMessage = rawText;
+          } catch (__) {}
+        }
+        throw new Error(fallbackMessage);
       }
-    } catch (err) {
+
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder("utf-8");
+
+      if (!reader) {
+        throw new Error("No body reader available for streaming.");
+      }
+
+      const tempId = Date.now().toString();
+      setMessages((prev) => [
+        ...prev,
+        { id: tempId, role: "ai", text: "" },
+      ]);
+
+      let accumulatedText = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunkText = decoder.decode(value, { stream: true });
+        accumulatedText += chunkText;
+
+        if (accumulatedText.includes("[ERROR]:")) {
+          const parts = accumulatedText.split("[ERROR]:");
+          accumulatedText = parts[0] + "\n\n⚠️ " + (parts[1] || "An error occurred.");
+        }
+
+        setMessages((prev) =>
+          prev.map((m) => (m.id === tempId ? { ...m, text: accumulatedText } : m))
+        );
+      }
+    } catch (err: any) {
+      clearInterval(progressInterval);
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now().toString(),
           role: "ai",
-          text: "Connection error. Please try again later.",
+          text: err?.message || "Connection error. Please try again later.",
         },
       ]);
     } finally {
@@ -277,52 +328,22 @@ export default function Chatbot() {
 
   return (
     <>
-      <AnimatePresence>
         {!isOpen && (
-          <motion.button
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{
-              scale: [1, 1.05, 1],
-              opacity: 1,
-              boxShadow: [
-                "0px 0px 0px 0px rgba(56, 189, 248, 0.4)",
-                "0px 0px 20px 10px rgba(56, 189, 248, 0)",
-                "0px 0px 0px 0px rgba(56, 189, 248, 0)",
-              ],
-            }}
-            transition={{
-              repeat: Infinity,
-              duration: 4.0,
-              ease: "easeInOut",
-            }}
-            exit={{ scale: 0, opacity: 0 }}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
+          <button
             onClick={() => setIsOpen(true)}
-            className="fixed bottom-6 right-6 w-16 h-16 bg-navy text-white rounded-full flex items-center justify-center z-50 group border border-electric/30"
+            className="fixed bottom-6 right-6 w-16 h-16 bg-navy text-white rounded-full flex items-center justify-center z-[9000] group border border-electric/30 hover:scale-105 shadow-xl transition-all"
           >
-            <Bot
-              size={28}
-              className="group-hover:scale-110 transition-transform"
-            />
-          </motion.button>
+            <Bot size={18} className="group-hover:scale-110 transition-transform" />
+          </button>
         )}
-      </AnimatePresence>
 
-      <AnimatePresence>
         {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            transition={{ type: "spring", stiffness: 150, damping: 25 }}
-            className="fixed bottom-4 right-4 md:bottom-6 md:right-6 w-[calc(100vw-32px)] md:w-[450px] h-[650px] max-h-[85vh] bg-white rounded-2xl shadow-2xl flex flex-col z-50 overflow-hidden border border-navy/10"
-          >
+          <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 w-[calc(100vw-24px)] md:w-[450px] h-[600px] max-h-[85vh] bg-white rounded-2xl shadow-2xl flex flex-col z-[9000] overflow-hidden border border-navy/10" >
             {/* Header */}
             <div className="bg-navy p-4 flex items-center justify-between shadow-md relative z-20">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-electric/20 flex items-center justify-center relative shadow-inner shadow-electric/50">
-                  <Bot size={20} className="text-white" />
+                  <Bot size={18} className="text-white" />
                   <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-navy"></div>
                 </div>
                 <div>
@@ -330,14 +351,13 @@ export default function Chatbot() {
                     Rutvik's AI Agent
                   </h3>
                   <p className="text-electric text-xs flex items-center gap-1">
-                    <Sparkles size={10} /> Always Online
+                    <Sparkles size={18} /> Always Online
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2 relative">
                 <button
-                  onClick={handleShare}
-                  className="text-white/70 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10"
+                  onClick={handleShare} className="text-white/70 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10"
                   aria-label="Share"
                 >
                   <Share2 size={18} />
@@ -346,35 +366,30 @@ export default function Chatbot() {
                   onClick={() => setShowOptions(!showOptions)}
                   className="text-white/70 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10"
                 >
-                  <MoreVertical size={20} />
+                  <MoreVertical size={18} />
                 </button>
                 <button
                   onClick={() => setIsOpen(false)}
                   className="text-white/70 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10"
                 >
-                  <X size={20} />
+                  <X size={18} />
                 </button>
 
                 {/* Options Dropdown */}
-                <AnimatePresence>
+                
                   {showOptions && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.9, y: 10 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                      className="absolute right-0 top-12 bg-white rounded-xl shadow-xl border border-navy/10 py-2 w-40 z-50"
-                    >
+                    <div   className="absolute right-0 top-12 bg-white rounded-xl shadow-xl border border-navy/10 py-2 w-40 z-50" >
                       <button
                         onClick={() => setConfirmDialog("reset")}
                         className="w-full text-left px-4 py-2 text-sm text-charcoal hover:bg-cream flex items-center gap-2 transition-colors"
                       >
-                        <RotateCcw size={16} /> Reset Chat
+                        <RotateCcw size={18} /> Reset Chat
                       </button>
                       <button
                         onClick={() => setConfirmDialog("delete")}
                         className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
                       >
-                        <Trash2 size={16} /> Delete Chat
+                        <Trash2 size={18} /> Delete Chat
                       </button>
                       <button
                         onClick={() => {
@@ -383,33 +398,20 @@ export default function Chatbot() {
                         }}
                         className="w-full text-left px-4 py-2 text-sm text-charcoal hover:bg-cream flex items-center gap-2 transition-colors"
                       >
-                        <Settings size={16} /> Admin Panel
+                        <Settings size={18} /> Admin Panel
                       </button>
-                    </motion.div>
+                    </div>
                   )}
-                </AnimatePresence>
               </div>
             </div>
 
             {/* Admin Panel Overlay */}
-            <AnimatePresence>
               {isAdminOpen && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="absolute inset-0 bg-navy/60 backdrop-blur-md z-40 flex items-center justify-center p-4 rounded-3xl"
-                >
-                  <motion.div
-                    initial={{ scale: 0.95, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.95, opacity: 0 }}
-                    className="bg-white rounded-2xl p-5 shadow-2xl max-w-sm w-full flex flex-col h-[80%]"
-                  >
+                <div className="absolute inset-0 bg-navy/60 backdrop-blur-md z-40 flex items-center justify-center p-4 rounded-3xl">
+                  <div className="bg-white rounded-2xl p-5 shadow-2xl max-w-sm w-full flex flex-col h-[80%]">
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="font-bold text-navy flex items-center gap-2">
-                        <Settings size={18} className="text-electric" /> Admin
-                        Setup
+                        <Settings size={18} className="text-electric" /> Admin Setup
                       </h3>
                       <button
                         onClick={() => setIsAdminOpen(false)}
@@ -428,56 +430,71 @@ export default function Chatbot() {
                       onChange={(e) => setAdminInstructions(e.target.value)}
                     ></textarea>
                     <button
-                      onClick={saveAdminInstructions}
+                      onClick={() => {
+                        localStorage.setItem("rutvik_admin_instructions", adminInstructions);
+                        setIsAdminOpen(false);
+                      }}
                       className="w-full py-2.5 rounded-xl bg-navy text-white font-bold text-sm hover:bg-electric transition-colors"
                     >
                       Save Knowledge
                     </button>
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Confirmation Dialog overlay */}
-            <AnimatePresence>
-              {confirmDialog && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="absolute inset-0 bg-navy/40 backdrop-blur-sm z-40 flex items-center justify-center p-4"
-                >
-                  <div className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-sm">
-                    <h4 className="font-bold text-navy text-lg mb-2">
-                      {confirmDialog === "reset"
-                        ? "Reset Conversation?"
-                        : "Delete Conversation?"}
-                    </h4>
-                    <p className="text-charcoal text-sm mb-6">
-                      Are you sure you want to{" "}
-                      {confirmDialog === "reset" ? "clear" : "delete"} all
-                      existing messages? This action cannot be undone.
-                    </p>
-                    <div className="flex gap-3 justify-end">
-                      <button
-                        onClick={() => setConfirmDialog(null)}
-                        className="px-4 py-2 text-sm font-medium text-navy hover:bg-cream rounded-lg transition-colors"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={
-                          confirmDialog === "reset" ? resetChat : deleteChat
-                        }
-                        className="px-4 py-2 text-sm font-bold text-white bg-electric hover:bg-blue-600 rounded-lg transition-colors shadow-sm"
-                      >
-                        Confirm
-                      </button>
-                    </div>
                   </div>
-                </motion.div>
+                </div>
               )}
-            </AnimatePresence>
+
+            {/* Confirmation Dialog overlay in Portal */}
+            {typeof document !== "undefined" &&
+              createPortal(
+                <>
+                  {confirmDialog && (
+                    <div className="fixed inset-0 bg-navy/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+                      <div className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-sm border border-navy/10 relative">
+                        <h4 className="font-bold text-navy text-lg mb-2">
+                          {confirmDialog === "reset"
+                            ? "Reset Conversation?"
+                            : "Delete Conversation?"}
+                        </h4>
+                        <p className="text-charcoal text-sm mb-6">
+                          Are you sure you want to{" "}
+                          {confirmDialog === "reset" ? "clear" : "delete"} all
+                          existing messages? This action cannot be undone.
+                        </p>
+                        <div className="flex gap-3 justify-end">
+                          <button
+                            onClick={() => setConfirmDialog(null)}
+                            className="px-4 py-2 text-sm font-medium text-navy hover:bg-cream rounded-lg transition-colors border border-navy/10"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={
+                              confirmDialog === "reset" ? resetChat : deleteChat
+                            }
+                            className="px-4 py-2 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors shadow-sm"
+                          >
+                            Confirm
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>,
+                document.body,
+              )}
+
+            {/* Toast Notification */}
+            {typeof document !== "undefined" &&
+              createPortal(
+                <>
+                  {toastMessage && (
+                    <div style={{ transform: "translateX(-50%)" }} className="fixed bottom-10 left-1/2 z-[10000] bg-navy text-white px-6 py-3 rounded-full shadow-lg font-medium text-sm flex items-center gap-2">
+                      <Sparkles size={18} className="text-electric" />
+                      {toastMessage}
+                    </div>
+                  )}
+                </>,
+                document.body,
+              )}
 
             {/* Messages Area */}
             <div
@@ -485,21 +502,14 @@ export default function Chatbot() {
               onClick={() => setShowOptions(false)}
             >
               {messages.map((msg, index) => (
-                <motion.div
-                  key={msg.id}
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className={`flex w-full ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                >
+                <div key={index} className={`flex w-full ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                   {msg.role === "ai" && (
                     <div className="w-8 h-8 rounded-full bg-electric text-white flex items-center justify-center shrink-0 mr-3 mt-1 shadow-sm">
-                      <Bot size={16} />
+                      <Bot size={18} />
                     </div>
                   )}
                   <div
-                    className={`max-w-[80%] rounded-2xl p-4 ${msg.role === "user" ? "bg-navy text-white rounded-tr-sm shadow-md" : "bg-white border border-black/5 text-charcoal rounded-tl-sm shadow-sm"}`}
-                  >
+                    className={`max-w-[80%] rounded-2xl p-4 ${msg.role === "user" ? "bg-navy text-white rounded-tr-sm shadow-md" : "bg-white border border-black/5 text-charcoal rounded-tl-sm shadow-sm"}`}>
                     {msg.image && (
                       <div className="mb-3 rounded-xl overflow-hidden relative group">
                         {msg.image.startsWith("data:image/") ? (
@@ -510,7 +520,7 @@ export default function Chatbot() {
                           />
                         ) : (
                           <div className="w-full h-24 bg-white/10 flex items-center justify-center gap-2 border border-white/20 rounded-xl">
-                            <FileText size={24} className="text-white/80" />
+                            <FileText size={18} className="text-white/80" />
                             <span className="text-sm font-medium text-white/80">Document Attached</span>
                           </div>
                         )}
@@ -524,32 +534,54 @@ export default function Chatbot() {
                       </div>
                     )}
                   </div>
-                </motion.div>
+                </div>
               ))}
               {isLoading && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex w-full justify-start items-center"
-                >
+                <div className="flex w-full justify-start items-center">
                   <div className="w-8 h-8 rounded-full bg-electric/20 text-electric flex items-center justify-center shrink-0 mr-3 shadow-sm">
-                    <Bot size={16} />
+                    <Bot size={18} />
                   </div>
-                  <div className="bg-white border border-black/5 px-5 py-3.5 rounded-2xl rounded-tl-sm flex gap-2 items-center shadow-sm">
-                    <motion.div
-                      animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
-                      transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
-                      className="w-2 h-2 bg-electric rounded-full"
-                    />
-                    <motion.span 
-                      animate={{ opacity: [0.4, 1, 0.4] }}
-                      transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-                      className="text-xs font-medium text-electric tracking-wide"
-                    >
-                      Thinking...
-                    </motion.span>
+                  <div className="bg-white border border-black/5 px-4 py-3 rounded-2xl rounded-tl-sm flex gap-3 items-center shadow-sm relative overflow-hidden min-w-[200px]">
+                    <div className="absolute left-0 top-0 bottom-0 bg-electric/5 transition-all duration-300 ease-out" 
+                      style={{ width: `${progress}%` }}></div>
+                    
+                    <div className="relative w-5 h-5 shrink-0 flex items-center justify-center">
+                      <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 24 24">
+                        <circle
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          fill="none"
+                          className="text-navy/10"
+                        />
+                        <circle
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          fill="none"
+                          strokeLinecap="round"
+                          className="text-electric animate-[spin_2s_linear_infinite]"
+                          strokeDasharray={2 * Math.PI * 10}
+                          strokeDashoffset={(2 * Math.PI * 10) * (1 - (progress / 100))}
+                          style={{ transition: 'stroke-dashoffset 0.3s ease' }}
+                        />
+                      </svg>
+                    </div>
+                    
+                    <div className="flex flex-col relative">
+                      <span className="text-xs font-bold text-navy">
+                        Analyzing
+                      </span>
+                      <span className="text-[10px] text-charcoal/70 font-medium tracking-wide">
+                        {progress}% Complete
+                      </span>
+                    </div>
                   </div>
-                </motion.div>
+                </div>
               )}
               <div ref={messagesEndRef} className="h-2" />
             </div>
@@ -572,14 +604,9 @@ export default function Chatbot() {
               </div>
 
               {/* File Preview */}
-              <AnimatePresence>
+              
                 {previewUrl && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10, height: 0 }}
-                    animate={{ opacity: 1, y: 0, height: "auto" }}
-                    exit={{ opacity: 0, y: 10, height: 0 }}
-                    className="mb-3 relative inline-block"
-                  >
+                  <div className="mb-3 relative inline-block">
                     <div className="relative group rounded-xl overflow-hidden border border-navy/10 w-24 h-24 bg-cream flex items-center justify-center shadow-sm">
                       {file?.type.startsWith("image/") ? (
                         <img
@@ -593,22 +620,20 @@ export default function Chatbot() {
 
                       <button
                         type="button"
-                        onClick={removeFile}
-                        className="absolute top-1 right-1 w-6 h-6 bg-charcoal/80 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={removeFile} className="absolute top-1 right-1 w-6 h-6 bg-charcoal/80 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                       >
-                        <X size={14} />
+                        <X size={18} />
                       </button>
                     </div>
-                  </motion.div>
+                  </div>
                 )}
-              </AnimatePresence>
+              
 
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
                   handleSend(input);
-                }}
-                className="flex items-end gap-2 bg-[#f4f4f5] rounded-2xl p-2 border border-black/5 focus-within:ring-2 focus-within:ring-electric/30 transition-shadow"
+                }} className="flex items-end gap-2 bg-[#f4f4f5] rounded-2xl p-2 border border-black/5 focus-within:ring-2 focus-within:ring-electric/30 transition-shadow"
               >
                 <div className="pb-1 pl-1">
                   <input
@@ -616,7 +641,6 @@ export default function Chatbot() {
                     className="hidden"
                     ref={fileInputRef}
                     onChange={handleFileChange}
-                    accept="image/*,.pdf,.doc,.docx"
                   />
                   <button
                     type="button"
@@ -624,7 +648,7 @@ export default function Chatbot() {
                     className="p-2 text-charcoal hover:text-navy hover:bg-black/5 rounded-full transition-colors flex shrink-0"
                     title="Upload File or Image"
                   >
-                    <Paperclip size={20} />
+                    <Paperclip size={18} />
                   </button>
                 </div>
 
@@ -638,8 +662,7 @@ export default function Chatbot() {
                       e.preventDefault();
                       handleSend(input);
                     }
-                  }}
-                  placeholder="Ask anything about Rutvik..."
+                  }} placeholder="Ask anything about Rutvik..."
                   className="flex-1 bg-transparent px-2 py-2.5 resize-none focus:outline-none text-sm text-charcoal leading-snug self-center"
                   disabled={isLoading}
                 />
@@ -647,10 +670,9 @@ export default function Chatbot() {
                 <div className="pb-1 pr-1">
                   <button
                     type="submit"
-                    disabled={(!input.trim() && !file) || isLoading}
-                    className="w-9 h-9 bg-navy text-white rounded-full flex items-center justify-center hover:bg-electric transition-colors disabled:opacity-40 disabled:hover:bg-navy shrink-0 shadow-sm"
+                    disabled={(!input.trim() && !file) || isLoading} className="w-9 h-9 bg-navy text-white rounded-full flex items-center justify-center hover:bg-electric transition-colors disabled:opacity-40 disabled:hover:bg-navy shrink-0 shadow-sm"
                   >
-                    <Send size={16} className="ml-0.5" />
+                    <Send size={18} className="ml-0.5" />
                   </button>
                 </div>
               </form>
@@ -660,9 +682,9 @@ export default function Chatbot() {
                 </span>
               </div>
             </div>
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
+      
     </>
   );
 }

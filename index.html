@@ -14,9 +14,138 @@
  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
  </head>
- <body class="bg-cream text-charcoal transition-colors duration-300">
+ <body class="text-charcoal transition-colors duration-300 overflow-x-hidden">
  <div id="root"></div>
  <script type="module" src="/src/main.tsx"></script>
+ <script>
+/* ============================================
+   RUTVIK PORTFOLIO — Motion & Interaction JS
+   Pure Vanilla JS | No dependencies
+   ============================================ */
+
+(function() {
+
+  // ── 1. SCROLL REVEAL ENGINE ──────────────────
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('in-view');
+        revealObserver.unobserve(entry.target); // animate once
+      }
+    });
+  }, {
+    threshold: 0.1,
+    rootMargin: '0px 0px -48px 0px'
+  });
+
+  // Observe all reveal elements
+  function initReveal() {
+    document.querySelectorAll(
+      '.reveal, .reveal-left, .reveal-scale, .reveal-grid'
+    ).forEach(el => revealObserver.observe(el));
+  }
+
+
+  // ── 2. NAVBAR SCROLL ─────────────────────────
+  function initNavbar() {
+    const nav = document.querySelector('nav, header, [class*="navbar"], [class*="nav-bar"]');
+    if (!nav) return;
+
+    const onScroll = () => {
+      nav.classList.toggle('scrolled', window.scrollY > 60);
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll(); // run once on load
+  }
+
+
+  // ── 3. BACK TO TOP ───────────────────────────
+  function initBackToTop() {
+    // Create button if it doesn't exist
+    let btn = document.querySelector('.back-to-top');
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.className = 'back-to-top';
+      btn.innerHTML = '↑';
+      btn.setAttribute('aria-label', 'Back to top');
+      document.body.appendChild(btn);
+    }
+
+    window.addEventListener('scroll', () => {
+      btn.classList.toggle('visible', window.scrollY > 400);
+    }, { passive: true });
+
+    btn.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+
+
+  // ── 4. SMOOTH ANCHOR LINKS ───────────────────
+  function initSmoothAnchors() {
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', (e) => {
+        const target = document.querySelector(anchor.getAttribute('href'));
+        if (target) {
+          e.preventDefault();
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+  }
+
+
+  // ── 5. ACTIVE NAV LINK (Scroll Spy) ──────────
+  function initScrollSpy() {
+    const sections = document.querySelectorAll('section[id]');
+    const navLinks = document.querySelectorAll('nav a[href^="#"], header a[href^="#"]');
+    if (!sections.length || !navLinks.length) return;
+
+    const spy = () => {
+      let current = '';
+      sections.forEach(section => {
+        if (window.scrollY >= section.offsetTop - 100) {
+          current = section.id;
+        }
+      });
+      navLinks.forEach(link => {
+        const href = link.getAttribute('href');
+        link.classList.toggle('active', href === `#${current}`);
+      });
+    };
+
+    window.addEventListener('scroll', spy, { passive: true });
+    spy();
+  }
+
+
+  // ── 6. INIT ALL ──────────────────────────────
+  // Wait for DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      initReveal();
+      initNavbar();
+      initBackToTop();
+      initSmoothAnchors();
+      initScrollSpy();
+    });
+  } else {
+    initReveal();
+    initNavbar();
+    initBackToTop();
+    initSmoothAnchors();
+    initScrollSpy();
+  }
+
+  // For React/Next.js — re-init after route changes if needed
+  // Call window.__initPortfolioMotion() from your page component's useEffect
+  window.__initPortfolioMotion = () => {
+    setTimeout(initReveal, 100);
+  };
+
+})();
+</script>
  </body>
 </html>
 

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowUpRight,
   Play,
@@ -33,8 +33,33 @@ type Project = {
   status: string;
   hasPrototype: boolean;
   color: string;
+  image: string;
   caseStudy: CaseStudy;
 };
+
+function ProjectImage({ src, alt }: { src: string; alt: string }) {
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  return (
+    <div className="relative w-full h-full bg-navy/5">
+      {/* Placeholder Layer */}
+      <div 
+        className={`absolute inset-0 flex items-center justify-center transition-opacity duration-700 ${isLoaded ? 'opacity-0' : 'opacity-100'}`}
+      >
+        <ImageIcon className="w-8 h-8 text-navy/20 animate-pulse" />
+      </div>
+
+      {/* Actual Image Layer */}
+      <img
+        src={src}
+        alt={alt}
+        loading="lazy"
+        onLoad={() => setIsLoaded(true)}
+        className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 ease-out group-hover:scale-105 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+      />
+    </div>
+  );
+}
 
 export default function Projects() {
   const [activeProject, setActiveProject] = useState<Project | null>(null);
@@ -54,6 +79,7 @@ export default function Projects() {
       hasPrototype: true,
       color:
         "from-blue-500/10 to-purple-500/10 hover:from-blue-500/20 hover:to-purple-500/20",
+      image: "https://image.pollinations.ai/prompt/premium%20AI%20companion%203D%20human%20avatar%20hologram%20futuristic%20UI?width=800&height=600&nologo=true",
       caseStudy: {
         problem:
           "Traditional AI chatbots are highly transactional, lack continuous contextual storage (long-term RAG memory), and fail to project a distinct, warm, empathic personality over voice-based interfaces.",
@@ -102,6 +128,7 @@ export default function Projects() {
       hasPrototype: true,
       color:
         "from-emerald-500/10 to-teal-500/10 hover:from-emerald-500/20 hover:to-teal-500/20",
+      image: "https://image.pollinations.ai/prompt/modern%20electric%20vehicle%20EV%20charging%20station%20app%20context%20cinematic%20lighting?width=800&height=600&nologo=true",
       caseStudy: {
         problem:
           "EV drivers face critical range anxiety in metropolitan India due to fragmented telemetry data, inaccurate station statuses, and complex, multiple pre-payment digital wallets.",
@@ -147,6 +174,7 @@ export default function Projects() {
       hasPrototype: true,
       color:
         "from-orange-500/10 to-amber-500/10 hover:from-orange-500/20 hover:to-amber-500/20",
+      image: "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&q=80&w=800",
       caseStudy: {
         problem:
           "Tier-2 Indian university hubs lack dependable, sanitized, lightning-quick dining setups matching campus schedules, leading to localized monopolies serving low-quality options.",
@@ -192,6 +220,7 @@ export default function Projects() {
       hasPrototype: true,
       color:
         "from-pink-500/10 to-rose-500/10 hover:from-pink-500/20 hover:to-rose-500/20",
+      image: "https://images.unsplash.com/photo-1589254065878-42c9da997008?auto=format&fit=crop&q=80&w=800",
       caseStudy: {
         problem:
           "Current voice assistants lack standard conversational parameters: failing to process conversational interruptions, localized dialects, or contextual voice-level changes.",
@@ -239,13 +268,7 @@ export default function Projects() {
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/micro-carbon.png')] opacity-[0.01] pointer-events-none"></div>
 
         <div className="max-w-6xl mx-auto relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="mb-16"
-          >
+          <div className="reveal mb-16" >
             <span className="text-xs font-bold uppercase tracking-widest text-electric bg-electric/10 px-3 py-1.5 rounded-full inline-block mb-3">
               Portfolio
             </span>
@@ -257,69 +280,43 @@ export default function Projects() {
               blueprints, and shipping logs crossing BBA marketing with
               high-level AI integrations.
             </p>
-          </motion.div>
+          </div>
 
           {/* Project List */}
-          <motion.div
-            variants={{
-              hidden: { opacity: 0 },
-              show: {
-                opacity: 1,
-                transition: { staggerChildren: 0.2 },
-              },
-            }}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, margin: "-50px" }}
-            className="grid md:grid-cols-2 gap-8"
-          >
+          <div className="reveal-grid grid md:grid-cols-2 gap-8 card-3d-wrap">
             {projects.map((project, i) => (
-              <motion.div
-                key={project.title}
-                layoutId={`project-card-${project.title}`}
-                variants={{
-                  hidden: { opacity: 0, y: 40 },
-                  show: {
-                    opacity: 1,
-                    y: 0,
-                    transition: { type: "spring", stiffness: 40, damping: 12 },
-                  },
-                }}
-                whileHover={{
-                  scale: 1.02,
-                  boxShadow: "0px 0px 30px rgba(56, 189, 248, 0.4)",
-                  borderColor: "rgba(56, 189, 248, 0.6)",
-                }}
-                onClick={() => openCaseStudy(project)}
-                className={`glass-panel rounded-3xl p-8 relative overflow-hidden group border border-white/60 bg-gradient-to-br ${project.color} backdrop-blur-md flex flex-col justify-between cursor-pointer`}
+              <motion.div key={project.title} onClick={() => openCaseStudy(project)}
+                initial={{ opacity: 0, y: 80 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                whileHover={{ z: 20, y: -5, scale: 1.02, boxShadow: "0 25px 50px -12px rgba(10, 22, 40, 0.15), 0 0 20px rgba(37, 99, 235, 0.25)" }}
+                transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94], delay: i * 0.1 }}
+                style={{ willChange: "transform", transformStyle: "preserve-3d" }}
+                className={`glass-panel rounded-[2rem] p-6 sm:p-8 relative overflow-hidden group border border-white/60 hover:border-electric/50 bg-gradient-to-br ${project.color} flex flex-col cursor-pointer transition-all duration-500`}
               >
-                <div className="absolute top-0 right-0 p-8 opacity-0 group-hover:opacity-100 transform translate-x-4 -translate-y-4 group-hover:translate-x-0 group-hover:translate-y-0 transition-all duration-300">
+                <div className="absolute top-0 right-0 p-8 opacity-0 group-hover:opacity-100 transform translate-x-4 -translate-y-4 group-hover:translate-x-0 group-hover:translate-y-0 transition-all duration-500">
                   <ArrowUpRight className="text-navy w-8 h-8 opacity-50" />
                 </div>
 
-                <div>
+                <div className="relative h-48 sm:h-56 mb-6 rounded-2xl overflow-hidden shadow-sm group-hover:shadow-md transition-all duration-500 bg-navy/5">
+                  <ProjectImage src={project.image} alt={project.title} />
+                  <div className={`absolute inset-0 bg-gradient-to-t ${project.color} opacity-40 mix-blend-multiply transition-opacity duration-500 group-hover:opacity-20 pointer-events-none`}></div>
+                </div>
+
+                <div className="flex-1 flex flex-col">
                   <div className="mb-4">
-                    <motion.span
-                      layoutId={`project-tag-${project.title}`}
-                      className="inline-block px-3 py-1 bg-white/50 rounded-full text-xs font-semibold text-navy tracking-wide mb-3 backdrop-blur-sm border border-white/50"
-                    >
+                    <span className="inline-block px-3 py-1 bg-white/50 rounded-full text-xs font-semibold text-navy tracking-wide mb-3 backdrop-blur-sm border border-white/50">
                       {project.tag}
-                    </motion.span>
-                    <motion.h3
-                      layoutId={`project-title-${project.title}`}
-                      className="font-serif text-3xl font-bold text-navy mb-1 flex items-center gap-3"
-                    >
+                    </span>
+                    <h3 className="font-serif text-2xl sm:text-3xl font-bold text-navy mb-1 flex items-center gap-3 transition-colors duration-300 group-hover:text-electric">
                       {project.title}
-                    </motion.h3>
-                    <motion.p
-                      layoutId={`project-type-${project.title}`}
-                      className="text-sm font-medium text-electric"
-                    >
+                    </h3>
+                    <p className="text-sm font-medium text-electric/80">
                       {project.type}
-                    </motion.p>
+                    </p>
                   </div>
 
-                  <p className="text-charcoal mb-8 leading-relaxed">
+                  <p className="text-charcoal mb-8 leading-relaxed line-clamp-3">
                     {project.description}
                   </p>
                 </div>
@@ -328,16 +325,15 @@ export default function Projects() {
                   <div className="flex flex-wrap gap-2 mb-6">
                     {project.stack.map((tech, j) => (
                       <span
-                        key={j}
-                        className="text-xs px-2.5 py-1 bg-navy/5 text-navy rounded-md font-medium border border-navy/10"
+                        key={j} className="text-[11px] px-2.5 py-1 bg-white/60 text-navy rounded-lg font-medium border border-navy/5 shadow-sm"
                       >
                         {tech}
                       </span>
                     ))}
                   </div>
 
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 justify-between pt-4 border-t border-navy/5">
-                    <div className="flex items-center gap-2 text-xs font-semibold text-navy bg-white/40 px-3 py-1.5 rounded-full border border-white self-start">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 justify-between pt-5 border-t border-navy/5">
+                    <div className="flex items-center justify-center gap-2 text-xs font-medium text-navy bg-white/40 px-3 py-1.5 rounded-xl border border-white/60">
                       {project.status}
                     </div>
 
@@ -346,7 +342,7 @@ export default function Projects() {
                         e.stopPropagation();
                         openCaseStudy(project);
                       }}
-                      className="flex items-center justify-center gap-2 text-xs font-bold text-white bg-navy hover:bg-electric transition-colors px-4 py-2.5 rounded-full shadow-sm"
+                      className="flex items-center justify-center gap-2 text-xs font-bold text-white bg-navy hover:bg-electric transition-all duration-300 px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg hover:-translate-y-0.5"
                     >
                       <BookOpen size={14} /> Explore Case Study
                     </button>
@@ -354,25 +350,24 @@ export default function Projects() {
                 </div>
               </motion.div>
             ))}
-          </motion.div>
+          </div>
         </div>
       </section>
 
       {/* Case Study Modal */}
       <AnimatePresence>
         {activeProject && (
-          <motion.div
+          <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 md:p-8 bg-navy/80 backdrop-blur-md"
-            onClick={() => setActiveProject(null)}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 md:p-8 bg-navy/80 backdrop-blur-md" onClick={() => setActiveProject(null)}
           >
-            <motion.div
-              layoutId={`project-card-${activeProject.title}`}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
               onClick={(e) => e.stopPropagation()}
               className="bg-cream w-full max-w-4xl h-[90vh] md:h-[85vh] rounded-3xl overflow-hidden shadow-2xl relative border border-white/20 flex flex-col"
             >
@@ -383,18 +378,12 @@ export default function Projects() {
                     {activeProject.title[0]}
                   </div>
                   <div>
-                    <motion.h3
-                      layoutId={`project-title-${activeProject.title}`}
-                      className="font-serif text-xl font-bold leading-tight"
-                    >
+                    <h3 className="font-serif text-xl font-bold leading-tight" >
                       {activeProject.title} Case Study
-                    </motion.h3>
-                    <motion.p
-                      layoutId={`project-type-${activeProject.title}`}
-                      className="text-xs text-white/60 font-medium tracking-wide uppercase mt-0.5"
-                    >
+                    </h3>
+                    <p className="text-xs text-white/60 font-medium tracking-wide uppercase mt-0.5" >
                       {activeProject.type}
-                    </motion.p>
+                    </p>
                   </div>
                 </div>
                 <button
@@ -411,19 +400,19 @@ export default function Projects() {
                   onClick={() => setActiveTab("overview")}
                   className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === "overview" ? "bg-navy text-white shadow-sm" : "text-charcoal hover:bg-cream hover:text-navy"}`}
                 >
-                  <Info size={16} /> Overview
+                  <Info size={18} /> Overview
                 </button>
                 <button
                   onClick={() => setActiveTab("design")}
                   className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === "design" ? "bg-navy text-white shadow-sm" : "text-charcoal hover:bg-cream hover:text-navy"}`}
                 >
-                  <Layers size={16} /> UX & Design Process
+                  <Layers size={18} /> UX & Design Process
                 </button>
                 <button
                   onClick={() => setActiveTab("tech")}
                   className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === "tech" ? "bg-navy text-white shadow-sm" : "text-charcoal hover:bg-cream hover:text-navy"}`}
                 >
-                  <Settings size={16} /> Technical Challenges
+                  <Settings size={18} /> Technical Challenges
                 </button>
               </div>
 
@@ -431,14 +420,10 @@ export default function Projects() {
               <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8">
                 {/* 1. OVERVIEW TAB */}
                 {activeTab === "overview" && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="space-y-6"
-                  >
+                  <div className="space-y-6" >
                     <div>
                       <h4 className="text-xs font-bold uppercase tracking-wider text-electric mb-2 flex items-center gap-1.5">
-                        <AlertCircle size={14} /> The Problem Statement
+                        <AlertCircle size={18} /> The Problem Statement
                       </h4>
                       <p className="text-navy text-base font-medium leading-relaxed bg-electric/5 border border-electric/15 p-5 rounded-2xl">
                         {activeProject.caseStudy.problem}
@@ -447,13 +432,12 @@ export default function Projects() {
 
                     <div>
                       <h4 className="text-xs font-bold uppercase tracking-wider text-navy mb-3 flex items-center gap-1.5">
-                        <ImageIcon size={14} /> Prototype Walkthrough & Visuals
+                        <ImageIcon size={18} /> Prototype Walkthrough & Visuals
                       </h4>
                       <div className="grid md:grid-cols-2 gap-4">
                         {activeProject.caseStudy.mockups.map((mockup, idx) => (
                           <div
-                            key={idx}
-                            className="bg-white border border-navy/10 p-5 rounded-2xl flex items-start gap-4 shadow-sm hover:border-navy/20 transition-all"
+                            key={idx || 0} className="bg-white border border-navy/10 p-5 rounded-2xl flex items-start gap-4 shadow-sm hover:border-navy/20 transition-all"
                           >
                             <div className="w-10 h-10 rounded-xl bg-cream flex items-center justify-center shrink-0 border border-navy/5">
                               {mockup.icon}
@@ -478,34 +462,28 @@ export default function Projects() {
                       <div className="flex flex-wrap gap-2">
                         {activeProject.stack.map((item, idx) => (
                           <span
-                            key={idx}
-                            className="text-xs px-3 py-1.5 bg-navy/5 text-navy font-bold rounded-lg border border-navy/5 shadow-sm"
+                            key={idx || 0} className="text-xs px-3 py-1.5 bg-navy/5 text-navy font-bold rounded-lg border border-navy/5 shadow-sm"
                           >
                             {item}
                           </span>
                         ))}
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
                 )}
 
                 {/* 2. DESIGN PROCESS TAB */}
                 {activeTab === "design" && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="space-y-6"
-                  >
+                  <div className="space-y-6" >
                     <div>
                       <h4 className="text-xs font-bold uppercase tracking-wider text-electric mb-4 flex items-center gap-1.5">
-                        <Layers size={14} /> Design Mechanics
+                        <Layers size={18} /> Design Mechanics
                       </h4>
                       <div className="space-y-4">
                         {activeProject.caseStudy.designProcess.map(
                           (step, idx) => (
                             <div
-                              key={idx}
-                              className="flex gap-4 items-start bg-white border border-navy/5 p-5 rounded-2xl"
+                              key={idx || 0} className="flex gap-4 items-start bg-white border border-navy/5 p-5 rounded-2xl"
                             >
                               <div className="w-8 h-8 rounded-full bg-navy text-white text-xs font-black flex items-center justify-center shrink-0 shadow-sm">
                                 {idx + 1}
@@ -523,8 +501,7 @@ export default function Projects() {
                       <div className="absolute inset-0 bg-gradient-to-br from-cream to-white opacity-50"></div>
                       <div className="w-16 h-16 bg-cream rounded-full flex items-center justify-center mb-4 border border-navy/5 z-10">
                         <Play
-                          size={24}
-                          className="text-electric fill-electric ml-1 animate-pulse"
+                          size={18} className="text-electric fill-electric ml-1 animate-pulse"
                         />
                       </div>
                       <h5 className="font-bold text-navy text-lg z-10">
@@ -535,26 +512,21 @@ export default function Projects() {
                         accessible below.
                       </p>
                     </div>
-                  </motion.div>
+                  </div>
                 )}
 
                 {/* 3. TECHNICAL CHALLENGES TAB */}
                 {activeTab === "tech" && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="space-y-6"
-                  >
+                  <div className="space-y-6" >
                     <div>
                       <h4 className="text-xs font-bold uppercase tracking-wider text-rose-500 mb-4 flex items-center gap-1.5">
-                        <AlertCircle size={14} /> Hurdles Solved
+                        <AlertCircle size={18} /> Hurdles Solved
                       </h4>
                       <div className="space-y-4">
                         {activeProject.caseStudy.challenges.map(
                           (challenge, idx) => (
                             <div
-                              key={idx}
-                              className="bg-white border border-red-500/10 hover:border-red-500/20 p-5 rounded-2xl flex gap-4 items-start transition-colors"
+                              key={idx || 0} className="bg-white border border-red-500/10 hover:border-red-500/20 p-5 rounded-2xl flex gap-4 items-start transition-colors"
                             >
                               <span className="text-lg mt-0.5 font-bold text-rose-500">
                                 ⚡
@@ -607,7 +579,7 @@ export default function Projects() {
                       </p>
                       <p className="text-charcoal">&#125;</p>
                     </div>
-                  </motion.div>
+                  </div>
                 )}
               </div>
 
@@ -626,9 +598,9 @@ export default function Projects() {
                       className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-5 py-3 rounded-xl text-xs font-bold transition-all hover:scale-105 duration-200 ${link.secondary ? "bg-navy/5 text-navy border border-navy/10 hover:bg-navy/10" : "bg-electric text-white shadow-md hover:bg-blue-600"}`}
                     >
                       {link.secondary ? (
-                        <FileText size={14} />
+                        <FileText size={18} />
                       ) : (
-                        <Globe size={14} />
+                        <Globe size={18} />
                       )}{" "}
                       {link.label}
                     </a>

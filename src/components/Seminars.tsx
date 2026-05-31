@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
-import { motion } from "motion/react";
 import { Mic, TrendingUp, BarChart3, Film, ArrowRight } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function Seminars() {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -13,6 +13,7 @@ export default function Seminars() {
     const newIndex = Math.round(container.scrollLeft / itemWidth);
     setActiveIndex(Math.min(newIndex, seminars.length - 1));
   };
+
 
   const seminars = [
     {
@@ -56,16 +57,10 @@ export default function Seminars() {
   return (
     <section
       id="seminars"
-      className="py-24 px-6 relative overflow-hidden bg-white"
+      className="py-24 px-6 relative overflow-hidden bg-transparent"
     >
       <div className="max-w-7xl mx-auto relative z-10">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="mb-16 md:text-center text-left"
-        >
+        <div className="mb-16 md:text-center text-left" >
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-navy/5 text-navy rounded-full text-xs font-bold tracking-wide border border-navy/10 uppercase mb-6">
             <Mic size={14} />
             <h2>Seminars & Workshops</h2>
@@ -77,26 +72,23 @@ export default function Seminars() {
             Professional development through industry events focused on
             marketing, media, technology, and analytics.
           </p>
-        </motion.div>
+        </div>
 
-        {/* Horizontal scroll on mobile, grid on desktop */}
+        {/* Horizontal scroll always */}
         <div
           ref={scrollRef}
-          onScroll={handleScroll}
-          className="flex overflow-x-auto md:grid md:grid-cols-2 lg:grid-cols-4 gap-6 pb-6 snap-x snap-mandatory hide-scrollbar pl-4 md:pl-0 pr-4"
+          onScroll={handleScroll} className="flex overflow-x-auto gap-6 pb-6 snap-x snap-mandatory hide-scrollbar pl-4 md:pl-0 pr-4"
         >
           {seminars.map((seminar, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, scale: 0.95, x: 20 }}
-              whileInView={{ opacity: 1, scale: 1, x: 0 }}
-              viewport={{ root: scrollRef, amount: 0.3, once: true }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-              className={`snap-center shrink-0 w-[85vw] md:w-auto p-8 rounded-3xl ${seminar.color} border border-white/50 shadow-xl shadow-black/5 flex flex-col h-full relative group transition-transform duration-300 hover:-translate-y-2`}
+            <motion.div 
+              initial={{ opacity: 0, x: 50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: i * 0.1 }}
+              key={i} className={`snap-center shrink-0 w-[85vw] md:w-[400px] p-8 rounded-3xl ${seminar.color} border border-white/50 shadow-xl shadow-black/5 flex flex-col h-full relative group transition-transform duration-300 hover:-translate-y-2`}
             >
               <div
-                className={`w-16 h-16 rounded-2xl ${seminar.accent} flex items-center justify-center mb-8 transform -rotate-3 group-hover:rotate-0 transition-transform duration-300 shadow-sm`}
-              >
+                className={`w-16 h-16 rounded-2xl ${seminar.accent} flex items-center justify-center mb-8 transform -rotate-3 group-hover:rotate-0 transition-transform duration-300 shadow-sm`}>
                 {seminar.icon}
               </div>
 
@@ -116,19 +108,18 @@ export default function Seminars() {
               </p>
 
               <div className="absolute top-8 right-8 opacity-0 group-hover:opacity-100 transition-opacity duration-300 -translate-x-4 group-hover:translate-x-0">
-                <ArrowRight size={20} className="text-current opacity-50" />
+                <ArrowRight size={24} className="text-current opacity-50" />
               </div>
             </motion.div>
           ))}
         </div>
 
-        {/* Mobile Pagination Indicator */}
-        <div className="flex flex-col items-center justify-center pt-2 pb-6 md:hidden max-w-[85vw] mx-auto opacity-80">
+        {/* Pagination Indicator */}
+        <div className="flex flex-col items-center justify-center pt-2 pb-6 max-w-[85vw] mx-auto opacity-80">
           <div className="flex gap-1.5 mb-2.5">
             {seminars.map((_, i) => (
               <div
-                key={i}
-                className={`h-1.5 rounded-full transition-all duration-300 ${
+                key={i} className={`h-1.5 rounded-full transition-all duration-300 ${
                   i === activeIndex ? "w-5 bg-navy" : "w-1.5 bg-navy/20"
                 }`}
               />
@@ -137,13 +128,9 @@ export default function Seminars() {
           <div className="text-navy/70 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5">
             <span>Swipe</span>
             <span className="text-navy/40">&mdash;</span>
-            <motion.span
-              animate={{ x: [0, 4, 0] }}
-              transition={{ repeat: Infinity, duration: 2 }}
-              className="text-navy"
-            >
+            <span className="text-navy">
               →
-            </motion.span>
+            </span>
           </div>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
-import { motion, useScroll, useTransform } from "motion/react";
 import { Anchor, Factory, Milk, Laptop, Lightbulb } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function IndustryVisits() {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -13,6 +13,7 @@ export default function IndustryVisits() {
     const newIndex = Math.round(container.scrollLeft / itemWidth);
     setActiveIndex(Math.min(newIndex, visits.length - 1));
   };
+
 
   const visits = [
     {
@@ -75,13 +76,7 @@ export default function IndustryVisits() {
       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5"></div>
 
       <div className="max-w-7xl mx-auto relative z-10">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="mb-12 md:mb-20 px-4 md:px-0"
-        >
+        <div className="mb-12 md:mb-20 px-4 md:px-0">
           <h2 className="font-serif text-3xl md:text-5xl font-bold mb-4 text-cream">
             Industry Immersions
           </h2>
@@ -89,22 +84,20 @@ export default function IndustryVisits() {
             My perspective is shaped by seeing real businesses operate at scale,
             not just reading about them in classrooms.
           </p>
-        </motion.div>
+        </div>
 
-        {/* Horizontal scroll on mobile, grid on desktop */}
+        {/* Horizontal scroll always */}
         <div
           ref={scrollRef}
-          onScroll={handleScroll}
-          className="flex overflow-x-auto md:grid md:grid-cols-2 lg:grid-cols-3 gap-6 pb-6 snap-x snap-mandatory hide-scrollbar pl-4 md:pl-0 pr-4"
+          onScroll={handleScroll} className="flex overflow-x-auto gap-6 pb-6 snap-x snap-mandatory hide-scrollbar pl-4 md:pl-0 pr-4"
         >
           {visits.map((visit, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true, margin: "-50px" }}
+            <motion.div 
+              initial={{ opacity: 0, x: 50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.1 }}
-              className={`min-w-[85vw] md:min-w-0 snap-center rounded-3xl p-8 flex flex-col h-full ${visit.color} border border-white/20 relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300`}
+              key={i} className={`min-w-[85vw] md:min-w-[400px] snap-center rounded-3xl p-8 flex flex-col h-full ${visit.color} border border-white/20 relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300`}
             >
               <div
                 className={`absolute -right-10 -top-10 w-32 h-32 rounded-full ${visit.accent} opacity-50 group-hover:scale-150 transition-transform duration-700 ease-out`}
@@ -136,13 +129,12 @@ export default function IndustryVisits() {
           ))}
         </div>
 
-        {/* Mobile Pagination Indicator */}
-        <div className="flex flex-col items-center justify-center pt-2 pb-6 md:hidden max-w-[85vw] mx-auto opacity-80">
+        {/* Pagination Indicator */}
+        <div className="flex flex-col items-center justify-center pt-2 pb-6 max-w-[85vw] mx-auto opacity-80">
           <div className="flex gap-1.5 mb-2.5">
             {visits.map((_, i) => (
               <div
-                key={i}
-                className={`h-1.5 rounded-full transition-all duration-300 ${
+                key={i} className={`h-1.5 rounded-full transition-all duration-300 ${
                   i === activeIndex ? "w-5 bg-white" : "w-1.5 bg-white/20"
                 }`}
               />
@@ -151,13 +143,9 @@ export default function IndustryVisits() {
           <div className="text-white/70 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5">
             <span>Swipe</span>
             <span className="text-white/40">&mdash;</span>
-            <motion.span
-              animate={{ x: [0, 4, 0] }}
-              transition={{ repeat: Infinity, duration: 2 }}
-              className="text-white"
-            >
+            <span className="text-white">
               →
-            </motion.span>
+            </span>
           </div>
         </div>
       </div>

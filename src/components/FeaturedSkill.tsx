@@ -1,46 +1,25 @@
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
-import {
-  Sparkles,
-  TerminalSquare,
-  MessageSquare,
-  ArrowRight,
-  Wand2,
-  Bot,
-  Copy,
-  Check,
-} from "lucide-react";
-
-const promptExamples = [
-  {
-    title: "Market Research Analysis",
-    prompt:
-      "Act as a senior market researcher. Analyze the current trends in sustainable packaging for D2C brands. Provide 3 actionable strategies, 2 potential risks, and structure the output in a scannable format with bullet points and bold headers.",
-    output:
-      "Clearly structured analysis identifying biodegradable materials, unboxing experience optimization, and cost-efficiency strategies, highlighting supply chain vulnerabilities.",
-  },
-  {
-    title: "Conversion Copywriting",
-    prompt:
-      "Write a high-converting landing page headline and subheadline for a new AI-powered time management app targeted at ADHD professionals. The tone should be empathetic, empowering, and concise. Avoid generic tech jargon.",
-    output:
-      "Resulted in 'Reclaim Your Focus, On Your Terms' with a subheadline emphasizing personalized workflows over rigid schedules.",
-  },
-  {
-    title: "Code Structuring",
-    prompt:
-      "I have a React component that is becoming too large (handling state, fetching data, and rendering UI). Outline a plan to refactor this into custom hooks and smaller presentation components using modern React patterns.",
-    output:
-      "Provided a step-by-step refactoring architecture, separating business logic into custom hooks and organizing UI into focused stateless components.",
-  },
-];
+import { Sparkles, Bot, Layers, Check, Copy, Wand2, MessageSquare, ArrowRight, Terminal } from "lucide-react";
 
 export default function FeaturedSkill() {
   const [activeTab, setActiveTab] = useState(0);
-  const [userPrompt, setUserPrompt] = useState("");
-  const [demoResponse, setDemoResponse] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [userPrompt, setUserPrompt] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [demoResponse, setDemoResponse] = useState("");
+
+  const promptExamples = [
+    {
+      title: "Content Marketing",
+      prompt: "Act as a senior copywriter. Draft a 3-part email sequence for a new SaaS product launch. Context: The product is AI-driven analytics. Target Audience: CMOs. Goal: Book a demo.",
+      output: "Subject 1: The AI Analytics edge for CMOs...\nSubject 2: Less data wrangling, more strategy...\nSubject 3: Quick 15-min demo to see it live...",
+    },
+    {
+      title: "Code Generation",
+      prompt: "Write a React hook in TypeScript that handles a paginated API request with built-in debouncing, error handling, and offline caching via localStorage.",
+      output: "const usePaginatedData = <T>({...}) => {\n  const [data, setData] = useState<T[]>([]);\n  // Implementation details...\n}",
+    },
+  ];
 
   const handleCopy = () => {
     navigator.clipboard.writeText(promptExamples[activeTab].prompt);
@@ -53,131 +32,87 @@ export default function FeaturedSkill() {
     if (!userPrompt.trim()) return;
 
     setIsGenerating(true);
-    setDemoResponse("");
-
-    // Simulate AI generation
     setTimeout(() => {
-      setIsGenerating(false);
       setDemoResponse(
-        `Here is a simulated AI response to: "${userPrompt}". In a real environment, this input would be processed by the Gemini API to demonstrate dynamic, context-aware prompt engineering capabilities live.`,
+        `Optimized output: Based on your input "${userPrompt.substring(
+          0,
+          20
+        )}...", here is a structured and highly contextualized response utilizing best prompt engineering practices.`
       );
+      setIsGenerating(false);
     }, 1500);
   };
 
   return (
-    <section
-      className="py-24 bg-navy relative overflow-hidden"
-      id="prompt-engineering"
-    >
-      {/* Background aesthetics */}
-      <div className="absolute inset-0 z-0">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-electric/20 rounded-full blur-3xl rounded-full"></div>
-        <div className="absolute top-1/3 -left-20 w-72 h-72 bg-purple-500/10 rounded-full blur-3xl rounded-full"></div>
+    <section id="featured-skill" className="py-24 px-4 md:px-6 relative bg-navy/90 backdrop-blur-md border-t border-white/5 overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-electric/10 blur-[120px]"></div>
+        <div className="absolute top-[60%] -right-[10%] w-[40%] h-[40%] rounded-full bg-purple-500/10 blur-[100px]"></div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 relative z-10">
-        <div className="text-center mb-16">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-electric/10 text-electric border border-electric/20 mb-6"
-          >
-            <Sparkles size={16} />
-            <span className="text-sm font-bold tracking-wide uppercase">
-              Featured Skill Spotlight
-            </span>
-          </motion.div>
-
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1 }}
-            className="font-serif text-4xl md:text-5xl font-bold text-white mb-6"
-          >
-            AI Prompt Engineering
-          </motion.h2>
-
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2 }}
-            className="text-lg md:text-xl text-white/70 max-w-2xl mx-auto font-light leading-relaxed"
-          >
-            The art and science of communicating effectively with large language
-            models to extract precise, high-value outputs.
-          </motion.p>
+      <div className="max-w-7xl mx-auto relative z-10">
+        <div className="mb-16 md:text-center text-left">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/5 text-electric rounded-full text-xs font-bold tracking-wide border border-white/10 uppercase mb-6">
+            <Sparkles size={14} />
+            <h2>Featured Skill</h2>
+          </div>
+          <h3 className="text-4xl md:text-5xl font-sans font-bold text-white tracking-tight mb-6">
+            Mastering Prompt Engineering
+          </h3>
+          <p className="text-white/60 text-lg md:text-xl max-w-2xl mx-auto font-medium">
+            Bridging the gap between human intention and AI execution through advanced instruction design.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-          {/* Left Column: Explanation & Examples */}
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="flex flex-col gap-8"
-          >
-            <div className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-sm">
-              <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-3">
-                <TerminalSquare className="text-electric" /> Designing the Input
-              </h3>
-              <p className="text-white/70 leading-relaxed mb-6 font-light">
-                Prompt engineering is more than just typing questions. It
-                involves structuring context, assigning roles, defining
-                constraints, and iterating based on output. A well-crafted
-                prompt turns a generic AI into a highly specialized expert
-                tailored to your exact workflow.
-              </p>
-
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="mt-1 bg-electric/20 p-1.5 rounded-full">
-                    <Wand2 size={14} className="text-electric" />
+        <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-start">
+          {/* Left Column: Explanations & Examples */}
+          <div className="space-y-6 md:space-y-8">
+            <div className="bg-white/[0.03] border border-white/10 rounded-2xl md:rounded-3xl p-6 md:p-8 backdrop-blur-sm shadow-xl">
+              <h3 className="text-xl md:text-2xl font-bold text-white mb-6">The Anatomy of a Perfect Prompt</h3>
+              
+              <div className="space-y-6">
+                <div className="flex items-start gap-4">
+                  <div className="mt-1 bg-electric/20 p-2 rounded-xl border border-electric/20">
+                    <Layers size={20} className="text-electric" />
                   </div>
                   <div>
-                    <h4 className="text-white font-semibold">
-                      Contextual Anchoring
-                    </h4>
-                    <p className="text-sm text-white/50">
-                      Providing background information to guide the AI's
-                      understanding.
-                    </p>
+                    <h4 className="text-white font-semibold mb-1">Structured Formatting</h4>
+                    <p className="text-sm text-white/50 leading-relaxed">Using markdown, delimiters, and clear headings to segment logical boundaries.</p>
                   </div>
                 </div>
-                <div className="flex items-start gap-3">
-                  <div className="mt-1 bg-electric/20 p-1.5 rounded-full">
-                    <MessageSquare size={14} className="text-electric" />
+                <div className="flex items-start gap-4">
+                  <div className="mt-1 bg-purple-500/20 p-2 rounded-xl border border-purple-500/20">
+                    <Wand2 size={20} className="text-purple-400" />
                   </div>
                   <div>
-                    <h4 className="text-white font-semibold">
-                      Persona Adoption
-                    </h4>
-                    <p className="text-sm text-white/50">
-                      Instructing the model to act as a specific expert or
-                      character.
-                    </p>
+                    <h4 className="text-white font-semibold mb-1">Contextual Anchoring</h4>
+                    <p className="text-sm text-white/50 leading-relaxed">Providing background information to guide the AI's understanding and constraints.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4">
+                  <div className="mt-1 bg-emerald-500/20 p-2 rounded-xl border border-emerald-500/20">
+                    <MessageSquare size={20} className="text-emerald-400" />
+                  </div>
+                  <div>
+                    <h4 className="text-white font-semibold mb-1">Persona Adoption</h4>
+                    <p className="text-sm text-white/50 leading-relaxed">Instructing the model to act as a specific expert, tailoring tone and depth.</p>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-sm">
-              <h3 className="text-2xl font-bold text-white mb-6">
-                Proven Prompt Structures
-              </h3>
+            <div className="bg-white/[0.03] border border-white/10 rounded-2xl md:rounded-3xl p-6 md:p-8 backdrop-blur-sm shadow-xl">
+              <h3 className="text-xl md:text-2xl font-bold text-white mb-6">Proven Prompt Structures</h3>
 
-              <div className="flex gap-2 overflow-x-auto pb-4 hide-scrollbar">
+              <div className="flex flex-wrap gap-2 pb-4">
                 {promptExamples.map((example, idx) => (
                   <button
                     key={idx}
                     onClick={() => setActiveTab(idx)}
-                    className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                    className={`whitespace-nowrap px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${
                       activeTab === idx
-                        ? "bg-electric text-white shadow-[0_0_15px_rgba(56,189,248,0.4)]"
-                        : "bg-white/10 text-white/60 hover:bg-white/15"
+                        ? "bg-electric text-white shadow-[0_0_15px_rgba(56,189,248,0.3)]"
+                        : "bg-white/5 text-white/60 hover:bg-white/10 border border-transparent hover:border-white/10"
                     }`}
                   >
                     {example.title}
@@ -185,164 +120,130 @@ export default function FeaturedSkill() {
                 ))}
               </div>
 
-              <div className="mt-4 relative min-h-[180px]">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={activeTab}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.3 }}
-                    className="absolute inset-0"
-                  >
-                    <div className="bg-navy/50 border border-white/5 rounded-xl p-5 mb-4 relative overflow-hidden group">
-                      <div className="absolute top-0 left-0 w-1 h-full bg-electric"></div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-mono text-electric block uppercase tracking-wider">
-                          Input Prompt
-                        </span>
-                        <button
-                          onClick={handleCopy}
-                          className="text-white/40 hover:text-white transition-colors bg-white/5 hover:bg-white/10 p-1.5 rounded-md flex items-center justify-center"
-                          title="Copy to clipboard"
-                        >
-                          {copied ? (
-                            <Check size={14} className="text-green-400" />
-                          ) : (
-                            <Copy size={14} />
-                          )}
-                        </button>
-                      </div>
-                      <p className="text-sm text-white/90 italic">
-                        "{promptExamples[activeTab].prompt}"
-                      </p>
+              <div className="mt-2 relative">
+                <div className="bg-[#0f172a] border border-white/10 rounded-2xl overflow-hidden group">
+                  {/* MacOS Window Header */}
+                  <div className="flex items-center px-4 py-3 bg-white/5 border-b border-white/5 gap-2">
+                    <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
+                    <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+                    <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
+                    <span className="ml-3 text-xs font-mono text-white/40 flex items-center gap-2"><Terminal size={12}/> terminal - bash</span>
+                  </div>
+                  <div className="p-5 relative">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-xs font-mono text-electric block uppercase tracking-wider font-bold">~ Input Prompt</span>
+                      <button
+                        onClick={handleCopy}
+                        className="text-white/40 hover:text-white transition-colors bg-white/5 hover:bg-white/10 p-2 rounded-lg flex items-center justify-center border border-white/5 hover:border-white/10"
+                        title="Copy to clipboard"
+                      >
+                        {copied ? <Check size={16} className="text-green-400" /> : <Copy size={16} />}
+                      </button>
                     </div>
-
-                    <div className="pl-4 border-l border-white/10 ml-2">
-                      <span className="text-xs font-mono text-emerald-400 mb-1 flex items-center gap-1">
-                        <ArrowRight size={12} /> Output Result
+                    <p className="text-sm md:text-base text-white/80 italic leading-relaxed mb-6 font-mono break-words whitespace-pre-wrap">
+                      "{promptExamples[activeTab].prompt}"
+                    </p>
+                    
+                    <div className="pt-5 border-t border-white/10">
+                      <span className="text-xs font-mono text-emerald-400 mb-3 flex items-center gap-2 font-bold">
+                        <ArrowRight size={14} /> Output Result
                       </span>
-                      <p className="text-sm text-white/60">
+                      <p className="text-sm md:text-base text-white/50 font-mono leading-relaxed bg-white/5 p-4 rounded-xl break-words whitespace-pre-wrap overflow-x-hidden">
                         {promptExamples[activeTab].output}
                       </p>
                     </div>
-                  </motion.div>
-                </AnimatePresence>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Right Column: Interactive Demo */}
-          <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="bg-cream rounded-3xl p-8 lg:p-10 shadow-2xl relative overflow-hidden"
-          >
-            {/* Top decorative bar */}
-            <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-electric via-purple-500 to-electric"></div>
-
-            <div className="flex items-center justify-between mb-8">
-              <h3 className="font-serif text-2xl font-bold text-navy flex items-center gap-2">
-                <Bot className="text-electric" /> Try It Yourself
-              </h3>
-              <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full uppercase tracking-wide">
-                Live Demo
-              </span>
-            </div>
-
-            <p className="text-charcoal mb-8 max-w-sm">
-              Experience the difference a clear prompt makes. Enter a basic
-              request below to see how it transforms.
-            </p>
-
-            <form onSubmit={handleDemoSubmit} className="mb-8">
-              <label
-                htmlFor="interactive-prompt"
-                className="block text-sm font-bold text-navy mb-2"
-              >
-                Your Prompt:
-              </label>
-              <div className="relative">
-                <textarea
-                  id="interactive-prompt"
-                  value={userPrompt}
-                  onChange={(e) => setUserPrompt(e.target.value)}
-                  placeholder="e.g., Write a cold email for a marketing agency..."
-                  className="w-full bg-white border-2 border-navy/10 rounded-xl p-4 min-h-[120px] text-charcoal focus:outline-none focus:border-electric focus:ring-4 focus:ring-electric/20 transition-all resize-none shadow-inner"
-                ></textarea>
-                <div className="absolute bottom-3 right-3 text-xs text-charcoal font-mono">
-                  {userPrompt.length} chars
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={!userPrompt.trim() || isGenerating}
-                className="mt-4 w-full bg-navy hover:bg-electric text-white font-bold py-3.5 px-6 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group shadow-lg hover:shadow-electric/30"
-              >
-                {isGenerating ? (
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{
-                      repeat: Infinity,
-                      duration: 1,
-                      ease: "linear",
-                    }}
-                  >
-                    <Wand2 size={18} className="text-white/80" />
-                  </motion.div>
-                ) : (
-                  <Sparkles size={18} className="group-hover:animate-pulse" />
-                )}
-                {isGenerating ? "Processing Context..." : "Simulate Output"}
-              </button>
-            </form>
-
-            <div className="bg-navy/5 rounded-xl border border-navy/10 p-6 min-h-[160px] flex flex-col relative overflow-hidden">
-              <h4 className="text-xs font-bold text-navy uppercase tracking-wider mb-3 flex items-center gap-2">
-                <ArrowRight size={14} className="text-electric" /> Generated
-                Response
-              </h4>
-
-              {demoResponse ? (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-sm text-charcoal leading-relaxed"
-                >
-                  {demoResponse}
-                </motion.div>
-              ) : isGenerating ? (
-                <div className="flex-1 flex flex-col items-center justify-center gap-3 text-charcoal">
-                  <div className="flex gap-1.5">
-                    {[0, 1, 2].map((i) => (
-                      <motion.div
-                        key={i}
-                        className="w-2 h-2 rounded-full bg-electric"
-                        animate={{ y: [0, -8, 0] }}
-                        transition={{
-                          duration: 0.6,
-                          repeat: Infinity,
-                          delay: i * 0.15,
-                        }}
-                      />
-                    ))}
                   </div>
-                  <span className="text-xs font-medium uppercase tracking-widest">
-                    Generating
-                  </span>
                 </div>
-              ) : (
-                <div className="flex-1 flex items-center justify-center text-charcoal text-sm italic text-center px-4">
-                  Enter a prompt and hit simulate to see the result here.
-                </div>
-              )}
+              </div>
             </div>
-          </motion.div>
+          </div>
+
+          {/* Right Column: Screen Demo Mockup */}
+          <div className="bg-cream rounded-2xl md:rounded-3xl shadow-2xl relative overflow-hidden ring-1 ring-black/5 transform transition-all duration-500 hover:shadow-electric/10 mt-4 md:mt-0">
+            {/* Screen Mockup Top Bar */}
+            <div className="bg-gray-100 px-4 py-3 border-b border-gray-200 flex items-center justify-between pointer-events-none sticky top-0 z-10 w-full">
+               <div className="flex gap-2">
+                  <div className="w-3 h-3 rounded-full bg-[#ff5f56]"></div>
+                  <div className="w-3 h-3 rounded-full bg-[#ffbd2e]"></div>
+                  <div className="w-3 h-3 rounded-full bg-[#27c93f]"></div>
+               </div>
+               <div className="flex-1 px-4">
+                  <div className="bg-white/80 border border-gray-200/60 rounded-md py-1 px-3 text-center text-xs font-medium text-gray-500 max-w-sm mx-auto shadow-inner flex items-center justify-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                    sandbox.prompt-engine.local
+                  </div>
+               </div>
+            </div>
+
+            <div className="p-6 md:p-8 lg:p-10 relative">
+              <div className="flex flex-wrap items-center justify-between mb-8 gap-4">
+                <h3 className="font-serif text-2xl font-bold text-navy flex items-center gap-2">
+                  <Bot className="text-electric" /> Try It Yourself
+                </h3>
+                <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full uppercase tracking-wide flex items-center gap-1.5 border border-green-200 shadow-sm">
+                   <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping"></div>
+                   Live Demo
+                </span>
+              </div>
+
+              <p className="text-charcoal/80 mb-8 max-w-sm text-sm md:text-base">
+                Experience the difference a precise instructional prompt structure makes.
+              </p>
+
+              <form onSubmit={handleDemoSubmit} className="mb-8">
+                <label htmlFor="interactive-prompt" className="block text-sm font-bold text-navy mb-2">
+                  Your Prompt:
+                </label>
+                <div className="relative group">
+                  <textarea
+                    id="interactive-prompt"
+                    value={userPrompt}
+                    onChange={(e) => setUserPrompt(e.target.value)}
+                    placeholder="e.g., Write a cold email for..."
+                    className="w-full bg-white border-2 border-navy/10 rounded-2xl p-4 min-h-[140px] text-charcoal focus:outline-none focus:border-electric focus:ring-4 focus:ring-electric/20 transition-all resize-none shadow-sm group-hover:border-navy/20"
+                  ></textarea>
+                  <div className="absolute bottom-4 right-4 text-xs text-charcoal/50 font-mono bg-white/80 backdrop-blur px-2 py-1 rounded-md border border-gray-100 pointer-events-none">
+                    {userPrompt.length} chars
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={!userPrompt.trim() || isGenerating}
+                  className="mt-6 w-full bg-navy hover:bg-electric text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed group shadow-xl hover:shadow-electric/30 hover:-translate-y-0.5"
+                >
+                  {isGenerating ? <div className="animate-spin"><Wand2 size={18} className="text-white/80" /></div> : <Sparkles size={18} className="group-hover:animate-pulse" />}
+                  {isGenerating ? "Processing Context..." : "Simulate AI Output"}
+                </button>
+              </form>
+
+              <div className="bg-navy/5 rounded-2xl border border-navy/10 p-6 min-h-[180px] flex flex-col relative overflow-hidden transition-all duration-300">
+                <h4 className="text-xs font-bold text-navy uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <ArrowRight size={16} className="text-electric" /> Generated Response
+                </h4>
+
+                {demoResponse ? (
+                  <div className="text-sm text-charcoal leading-relaxed p-4 bg-white/60 rounded-xl border border-white shadow-sm font-medium">{demoResponse}</div>
+                ) : isGenerating ? (
+                  <div className="flex-1 flex flex-col items-center justify-center gap-4 text-charcoal/60">
+                    <div className="flex gap-2">
+                      {[0, 1, 2].map((_, i) => (
+                        <div key={i} className="w-2.5 h-2.5 rounded-full bg-electric animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                      ))}
+                    </div>
+                    <span className="text-xs font-semibold uppercase tracking-widest text-navy bg-navy/5 px-3 py-1 rounded-full">Reasoning</span>
+                  </div>
+                ) : (
+                  <div className="flex-1 flex items-center justify-center text-charcoal/50 text-sm italic text-center px-4">
+                    <div className="max-w-[200px]">Enter a prompt above and hit simulate to observe the contextual output.</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
   );
 }
+

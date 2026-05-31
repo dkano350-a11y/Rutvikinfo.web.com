@@ -9,48 +9,155 @@
   --color-electric: #2563eb;
   --color-gold: #c9a84c;
   --color-charcoal: #1a1a1a;
+  
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1.25rem;
+  --radius-xl: 1.75rem;
+  --radius-2xl: 2.25rem;
+  --radius-3xl: 3rem;
+  
+  --animate-wave: wave 2.5s infinite;
 }
 
-html {
-  scroll-behavior: smooth;
-  overflow-x: hidden;
+@layer base {
+  html { 
+    overflow-x: hidden; 
+  }
+  body { 
+    background-color: var(--color-cream);
+    color: var(--color-charcoal);
+    font-family: var(--font-sans);
+    overflow-x: hidden; 
+  }
 }
 
-body {
-  background-color: var(--color-cream);
-  color: var(--color-charcoal);
-  font-family: var(--font-sans);
-  overflow-x: hidden;
+@layer utilities {
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
+  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  
+  ::selection { 
+    background-color: var(--color-electric); 
+    color: #fff; 
+  }
+
+  .glass-panel {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 16px 40px -10px rgba(10, 22, 40, 0.08);
+  }
+
+  /* Force all tailwind transitions to buttery smooth per user request */
+  .transition, .transition-all, .transition-colors, .transition-opacity, .transition-transform {
+    transition-duration: 0.6s !important;
+    transition-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+  }
+
+  /* 3D Depth Card Utilities */
+  .card-3d-wrap {
+    perspective: 1000px;
+    transform-style: preserve-3d;
+  }
+  
+  .card-3d {
+    will-change: transform;
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+
+  .card-3d:hover {
+    transform: translateZ(20px) translateY(-5px);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Global butter transition classes */
+  .transition-butter {
+    transition-duration: 0.6s;
+    transition-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  
+  .gradient-text {
+    -webkit-text-fill-color: transparent;
+    background: auto; /* Fallback */
+    background: linear-gradient(135deg, #2563eb, #8b5cf6);
+    -webkit-background-clip: text;
+    background-clip: text;
+  }
 }
 
-/* Hide scrollbar for Chrome, Safari and Opera */
-.hide-scrollbar::-webkit-scrollbar {
-  display: none;
+@keyframes wave {
+  0% { transform: rotate(0deg); }
+  10% { transform: rotate(14deg); }
+  20% { transform: rotate(-8deg); }
+  30% { transform: rotate(14deg); }
+  40% { transform: rotate(-4deg); }
+  50% { transform: rotate(10deg); }
+  60% { transform: rotate(0deg); }
+  100% { transform: rotate(0deg); }
 }
 
-/* Hide scrollbar for IE, Edge and Firefox */
-.hide-scrollbar {
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
+@keyframes mesh-pulse {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
-::selection {
-  background-color: var(--color-electric);
-  color: white;
+.mesh-preloader {
+  background: linear-gradient(-45deg, #ff0f7b, #590fb7, #f80838, #8c1eff);
+  background-size: 400% 400%;
+  animation: mesh-pulse 3s ease infinite;
 }
 
-/* Glassmorphism utility */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.4);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  box-shadow: 0 8px 32px 0 rgba(10, 22, 40, 0.05);
+/* Custom interactive hover glow effect for projects */
+#projects .glass-panel {
+  transition: border-color 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
+              box-shadow 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
+              transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
+              backdrop-filter 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              -webkit-backdrop-filter 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
 }
 
-.gradient-text {
-  background: linear-gradient(135deg, #2563eb 0%, #8b5cf6 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+#projects .glass-panel:hover {
+  cursor: pointer !important;
+  transform: translateY(-4px) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border-color: rgba(37, 99, 235, 0.45) !important;
+  box-shadow: 0 25px 50px -12px rgba(10, 22, 40, 0.15), 0 0 20px rgba(37, 99, 235, 0.25) !important;
 }
+
+/* Perfect premium sleek buttery scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(10, 22, 40, 0.02);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(37, 99, 235, 0.25);
+  border-radius: 9999px;
+  border: 3px solid var(--color-cream);
+  transition: background 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(37, 99, 235, 0.5);
+}
+
+/* Global button action feel improvement */
+a, button, input[type="button"], input[type="submit"] {
+  outline: none;
+}
+
+/* Form inputs sleek active focus state */
+input, textarea, select {
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+}
+input:focus, textarea:focus, select:focus {
+  border-color: var(--color-electric) !important;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15) !important;
+}
+
+
