@@ -75,11 +75,11 @@ export default function App() {
   return (
     <ToastProvider>
       <ReactLenis root options={{ 
-        lerp: 0.08, 
-        duration: 1.5, 
+        lerp: 0.05, 
+        duration: 2.0, 
         smoothWheel: true, 
-        wheelMultiplier: 1.1,
-        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t))
+        wheelMultiplier: 1.3,
+        easing: (t) => t === 1 ? 1 : 1 - Math.pow(2, -10 * t)
       }}>
         <AnimatePresence>
           {isLoading && (
